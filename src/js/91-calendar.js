@@ -1,0 +1,36 @@
+/* ============ puentes con otros calendarios: enlaces, .ics de salida y .ics de entrada. Sin servidor no hay sincronización en vivo ============ */
+function offMin(z,d){try{const s=new Intl.DateTimeFormat('en-US',{timeZone:z,timeZoneName:'longOffset'}).formatToParts(d).find(x=>x.type==='timeZoneName').value,m=/GMT([+-])(\d{2}):?(\d{2})/.exec(s);return m?(m[1]==='-'?-1:1)*(+m[2]*60+ +m[3]):0}catch(e){return-300}}
+const offStr=(z,c,sep='')=>{const o=offMin(z,dObj(c)),a=Math.abs(o);return(o<0?'-':'+')+p2(Math.floor(a/60))+sep+p2(a%60)};
+function endOf(a){const[h,m]=a.time.split(':').map(Number),tot=h*60+m+fin(a.dur,30);return{date:addDays(a.date,Math.floor(tot/1440)),time:p2(Math.floor(tot%1440/60))+':'+p2(tot%60)}}
+/* por defecto el asunto es neutro; la doctora puede elegir iniciales o nombre, sabiendo que su calendario externo se guarda en la nube de ese proveedor */
+function evTitle(a,p){const m=S.settings.calNames||'neutro',base='Cita '+(S.settings.clinic||'clínica').replace(/[,;\\]/g,' ');if(!p||m==='neutro')return base;const n=(p.name||'').trim();
+  return m==='nombre'?`${APPT_TYPE[a.type]||'Cita'} · ${n}`.replace(/[,;\\]/g,' '):`${base} · ${n.split(/\s+/).map(w=>w[0]||'').join('').toUpperCase()}`}
+function icsEvent(a,p){const z=a.tz||'America/Bogota',f=d=>d.date.replace(/-/g,'')+'T'+d.time.replace(':','')+'00',now=new Date().toISOString().replace(/[-:]/g,'').slice(0,15)+'Z';
+  return['BEGIN:VEVENT','UID:'+a.id+'@simulador-skind','DTSTAMP:'+now,'SEQUENCE:'+fin(a.seq),'DTSTART;TZID='+z+':'+f(a),'DTEND;TZID='+z+':'+f(endOf(a)),'SUMMARY:'+evTitle(a,p),'STATUS:'+(a.status==='cancelled'?'CANCELLED':a.status==='tentative'?'TENTATIVE':'CONFIRMED'),'TRANSP:OPAQUE','END:VEVENT']}
+function icsWrap(evs,z='America/Bogota'){const o=offStr(z,today());return['BEGIN:VCALENDAR','VERSION:2.0','PRODID:-//SKIND//Simulador//ES','CALSCALE:GREGORIAN','METHOD:PUBLISH','BEGIN:VTIMEZONE','TZID:'+z,'BEGIN:STANDARD','DTSTART:19700101T000000','TZOFFSETFROM:'+o,'TZOFFSETTO:'+o,'END:STANDARD','END:VTIMEZONE',...evs.flat(),'END:VCALENDAR'].join('\r\n')+'\r\n'}
+const icsFor=(a,p)=>icsWrap([icsEvent(a,p)],a.tz);
+function calLinks(a,p){const t=encodeURIComponent(evTitle(a,p)),e=endOf(a),z=a.tz||'America/Bogota',g=d=>d.date.replace(/-/g,'')+'T'+d.time.replace(':','')+'00',o=d=>encodeURIComponent(`${d.date}T${d.time}:00${offStr(z,d.date,':')}`),q=`?path=%2Fcalendar%2Faction%2Fcompose&rru=addevent&subject=${t}&startdt=${o(a)}&enddt=${o(e)}`;
+  return{google:`https://calendar.google.com/calendar/render?action=TEMPLATE&text=${t}&dates=${g(a)}/${g(e)}&ctz=${encodeURIComponent(z)}`,outlook:'https://outlook.live.com/calendar/0/deeplink/compose'+q,office:'https://outlook.office.com/calendar/0/deeplink/compose'+q}}
+function calLinkBtns(a,p){const L=calLinks(a,p);return[['google','Google Calendar'],['outlook','Outlook'],['office','Office 365']].map(([k,l])=>`<a class="btn" target="_blank" rel="noopener noreferrer" href="${esc(L[k])}">${l}</a>`).join('')}
+async function icsAll(){const evs=[];for(const p of S.patients)for(const a of p.appts)if(APPT_OPEN.includes(a.status)&&a.date>=today())evs.push(icsEvent(a,p));
+  if(!evs.length){toast('No hay citas futuras para exportar.');return}
+  if(await saveFile(`agenda-skind_${today()}.ics`,new Blob([icsWrap(evs,S.settings.tz)],{type:'text/calendar'})))toast(`${evs.length} cita(s) exportadas. Al importarlas de nuevo, la mayoría de calendarios actualiza las que ya tenía en lugar de duplicarlas.`,7000)}
+/* lectura de un .ics exportado desde Google, Outlook o iCloud: se muestra como «ocupado» y avisa cruces. Repeticiones simples (diaria, semanal, mensual). */
+function parseICS(txt,from,to){const Z=S.settings.tz||'America/Bogota',L=txt.replace(/\r?\n[ \t]/g,'').split(/\r?\n/),evs=[];let c=null;
+  for(const l of L){if(l==='BEGIN:VEVENT')c={};else if(l==='END:VEVENT'){if(c)evs.push(c);c=null}else if(c){const i=l.indexOf(':');if(i<0)continue;const[n,...ps]=l.slice(0,i).split(';');c[n.toUpperCase()]={v:l.slice(i+1),p:Object.fromEntries(ps.map(x=>x.split('=')))}}}
+  const loc=f=>{if(!f)return null;const m=/^(\d{4})(\d\d)(\d\d)(?:T(\d\d)(\d\d)(\d\d)(Z)?)?$/.exec(f.v.trim());if(!m)return null;const d=`${m[1]}-${m[2]}-${m[3]}`;if(!m[4])return{date:d,time:'00:00',allDay:true};
+      const tz=m[7]?'UTC':(f.p.TZID||Z).replace(/"/g,'');if(tz===Z)return{date:d,time:m[4]+':'+m[5]};const w=Date.UTC(+m[1],m[2]-1,+m[3],+m[4],+m[5]),inst=w-offMin(tz,new Date(w))*6e4,l2=new Date(inst+offMin(Z,new Date(inst))*6e4).toISOString();return{date:l2.slice(0,10),time:l2.slice(11,16)}},
+    mins=x=>{const[h,m]=x.time.split(':').map(Number);return daysBetween('2000-01-01',x.date)*1440+h*60+m},out=[];
+  for(const e of evs){if(e.STATUS&&/CANCELLED/i.test(e.STATUS.v))continue;const s=loc(e.DTSTART);if(!s)continue;const en=loc(e.DTEND);let dur=s.allDay?1440:60;if(en)dur=Math.max(5,mins(en)-mins(s));else if(e.DURATION){const m=/P(?:(\d+)D)?T?(?:(\d+)H)?(?:(\d+)M)?/.exec(e.DURATION.v);if(m)dur=(+m[1]||0)*1440+(+m[2]||0)*60+(+m[3]||0)||dur}
+    const title=(e.SUMMARY?e.SUMMARY.v:'').replace(/\\([,;n\\])/g,(_,x)=>x==='n'?' ':x).slice(0,80),push=d=>{if(d>=from&&d<=to)out.push({date:d,time:s.time,dur:Math.min(dur,1440),allDay:!!s.allDay,title})};
+    if(!e.RRULE){push(s.date);continue}
+    const R=Object.fromEntries(e.RRULE.v.split(';').map(x=>x.split('='))),iv=Math.max(1,+R.INTERVAL||1),cnt=+R.COUNT||1e9,until=R.UNTIL?`${R.UNTIL.slice(0,4)}-${R.UNTIL.slice(4,6)}-${R.UNTIL.slice(6,8)}`:to,end=until<to?until:to,days=R.BYDAY?R.BYDAY.split(',').map(x=>['SU','MO','TU','WE','TH','FR','SA'].indexOf(x.slice(-2))):null;let n=0,d=s.date,g=0;
+    while(d<=end&&n<cnt&&g++<1500){if(R.FREQ==='WEEKLY'&&days){const wk=Math.floor(daysBetween(addDays(s.date,-dObj(s.date).getDay()),d)/7);if(days.includes(dObj(d).getDay())&&wk%iv===0){push(d);n++}d=addDays(d,1)}
+      else{push(d);n++;d=R.FREQ==='DAILY'?addDays(d,iv):R.FREQ==='WEEKLY'?addDays(d,7*iv):R.FREQ==='MONTHLY'?addMonths(d,iv):R.FREQ==='YEARLY'?addMonths(d,12*iv):addDays(end,1)}}}
+  return out}
+async function icsImport(file){let txt;try{txt=await file.text()}catch(e){return errBox('No se pudo leer','El archivo no se pudo abrir.')}
+  if(!/BEGIN:VCALENDAR/.test(txt))return errBox('Archivo no válido','No es un calendario en formato .ics. Expórtalo desde Google Calendar, Outlook o iCloud y vuelve a intentarlo.');
+  const evs=parseICS(txt,addDays(today(),-7),addDays(today(),180));
+  const r=await formBox('Traer otro calendario',[{k:'src',label:'Nombre para identificarlo',value:file.name.replace(/\.ics$/i,'').slice(0,40),required:true},{k:'titles',type:'check',label:'Mostrar el título de cada evento (si no, aparece como «Ocupado»)',value:true},
+    {k:'i',type:'info',label:`Se encontraron ${evs.length} evento(s) entre hace una semana y los próximos seis meses. Se guardan en este equipo como bloqueos para avisar cruces. Es una copia del momento: si tu calendario cambia, tráelo otra vez con el mismo nombre y se reemplaza.`}],'Traer eventos');
+  if(!r)return;S.blocks=S.blocks.filter(b=>!(b.ext&&b.src===r.src)).concat(evs.map(e=>({id:uid(),ext:true,src:r.src,title:r.titles&&e.title?e.title:'Ocupado',date:e.date,time:e.time,dur:e.dur,allDay:e.allDay})));saveKV('blocks');toast(`${evs.length} evento(s) de «${r.src}» en la agenda.`);render()}

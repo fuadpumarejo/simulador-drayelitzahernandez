@@ -5,7 +5,7 @@ ARGS=['--use-gl=angle','--use-angle=swiftshader','--enable-unsafe-swiftshader','
 OUT=os.path.join(os.path.dirname(os.path.abspath(__file__)),'out'); os.makedirs(OUT,exist_ok=True)
 def launch(p): return p.chromium.launch(executable_path='/usr/bin/google-chrome',args=ARGS)
 def page(b,w=1280,h=860,mobile=False,tz=None):
-    kw=dict(viewport={'width':w,'height':h},accept_downloads=True)
+    kw=dict(viewport={'width':w,'height':h},accept_downloads=True,service_workers='block')
     if mobile: kw.update(has_touch=True,is_mobile=True,device_scale_factor=2)
     if tz: kw['timezone_id']=tz
     ctx=b.new_context(**kw); pg=ctx.new_page(); pg.errs=[]
@@ -39,6 +39,7 @@ def files(pg,sel,items):
     pg.set_input_files(sel,[{'name':n,'mimeType':m,'buffer':b} for n,m,b in items])
 def modal_ok(pg): pg.click('#mCard button.primary, #mCard button.dangerfill'); pg.wait_for_timeout(150)
 def fb(pg,vals,submit=True):
+    pg.wait_for_timeout(70)  # el diálogo enfoca su primer campo a los 30 ms; esperar evita escribir en el campo equivocado
     for k,v in vals.items():
         el=pg.locator('#fb_'+k)
         if isinstance(v,bool): el.set_checked(v)

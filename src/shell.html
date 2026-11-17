@@ -6,6 +6,12 @@
 <meta name="color-scheme" content="light">
 <meta name="robots" content="noindex,nofollow">
 <meta name="referrer" content="no-referrer">
+<meta name="theme-color" content="#6A3FCF">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icons/icon-180.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="SKIND">
 <title>Simulador SKIND</title>
 <style>
 /*FONTS*/
@@ -20,6 +26,7 @@
     <div class="grow"><b id="brandName">Simulador SKIND</b><span id="brandSub">Dra. Yelitza Hernández</span></div>
   </div>
   <nav class="nav top" id="navTop" aria-label="Secciones"></nav>
+  <button class="chip" id="modeBtn" type="button" data-act="modeToggle" aria-pressed="false" title="Oculta lo administrativo mientras la paciente ve la pantalla">Vista de consulta</button>
   <button class="chip" id="saveChip" type="button" aria-live="polite" title="Estado del guardado en este dispositivo">Iniciando…</button>
 </header>
 <main id="app" tabindex="-1"></main>
@@ -27,6 +34,9 @@
 <input type="file" id="fileCam" accept="image/*" capture="environment" class="hide" aria-label="Tomar foto">
 <input type="file" id="fileLib" accept="image/jpeg,image/png,image/heic,image/heif,image/*" class="hide" aria-label="Elegir fotos" multiple>
 <input type="file" id="fileCase" accept=".yhcase,.yhbackup,.json,application/octet-stream,application/json" class="hide" aria-label="Importar caso o respaldo">
+<input type="file" id="fileContacts" accept=".xlsx,.xls,.csv,.txt,text/csv" class="hide" aria-label="Importar contactos">
+<input type="file" id="fileProd" accept="image/*" class="hide" aria-label="Foto del producto">
+<input type="file" id="fileIcs" accept=".ics,text/calendar" class="hide" aria-label="Traer calendario externo">
 <input type="file" id="fileDoc" accept=".pdf,.jpg,.jpeg,.png,application/pdf,image/jpeg,image/png" class="hide" aria-label="Adjuntar documentos" multiple>
 <div id="overlay"></div>
 <!--VENDOR-->

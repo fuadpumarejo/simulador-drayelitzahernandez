@@ -15,7 +15,7 @@ const acts={
   filter:e=>{S.filter=e.dataset.s;renderList()},
   delPatient:async()=>{const p=patient();if(!await confirmBox('Eliminar paciente de este equipo',`Se eliminarán la ficha, las fotos, las propuestas y los documentos de ${p.name||'esta paciente'} en este equipo. No se puede deshacer. Si necesitas conservarlo, exporta antes el caso editable.`,'Eliminar definitivamente',{danger:true}))return;
     await Saver.flush();const ops=[{op:'del',store:'patients',key:p.id},...(await Store.photosOf(p.id)).map(x=>({op:'del',store:'photos',key:x.id})),...(await Store.docsOf(p.id)).map(x=>({op:'del',store:'docs',key:x.id}))];await Store.atomic(ops);
-    S.patients=S.patients.filter(x=>x.id!==p.id);S.library=S.library.filter(e=>e.patientId!==p.id);saveKV('library');if(S.last&&S.last.pid===p.id){S.last=null;saveKV('last')}S.pid=null;go('pacientes')},
+    S.patients=S.patients.filter(x=>x.id!==p.id);S.library=S.library.filter(e=>e.patientId!==p.id);saveKV('library');if(S.last&&S.last.pid===p.id){S.last=null;saveKV('last')}if(typeof Sync!=='undefined')await Sync.forget(p);S.pid=null;go('pacientes')},
   exportCase:()=>exportCaseFlow(patient()),backup:exportBackupFlow,xlsAll:exportAllXLS,undoReplace:e=>undoReplace(e.dataset.id),recDel:async e=>{await Store.del('recovery',e.dataset.id);render()},
   leadConvert:e=>{const l=S.leads.find(x=>x.id===e.dataset.id);if(!l)return;ui.wiz={step:1,regions:[],name:l.name,phone:l.phone,lead:l.id};go('nueva')},
   leadClose:e=>{const l=S.leads.find(x=>x.id===e.dataset.id);if(l){l.status='cerrado';saveKV('leads');render()}},
@@ -174,7 +174,7 @@ async function seedDemo(){
   const cat=id=>S.settings.catalog.find(c=>c.id===id),o=newOpp({stage:'val_realizada',interests:['Rinoplastia']});o.stageHist.push({at:nowISO(),from:'',to:'val_realizada',note:'Ejemplo'});
   for(const id of['rino','blefaro']){const c=cat(id);if(c)o.plan.push({uid:uid(),procId:c.id,name:c.name,minH:c.minH,maxH:c.maxH,price:0,note:''})}p.opps.push(o);
   await Store.atomic([{op:'put',store:'patients',value:p},{op:'put',store:'photos',value:ph}]);S.patients.push(p)}
-async function loadAll(){S.patients=await Store.all('patients');for(const k of['leads','blocks','library'])S[k]=(await Store.get('kv',k))||[];S.last=(await Store.get('kv','last'))||null;
+async function loadAll(){S.patients=await Store.all('patients');for(const k of['leads','blocks','library','campaigns','posts'])S[k]=(await Store.get('kv',k))||[];for(const p of S.patients)if(!p.treatments)p.treatments=[];S.last=(await Store.get('kv','last'))||null;
   const s=await Store.get('kv','settings');if(s)S.settings={...clone(DEFAULT_SETTINGS),...s,captureTpl:s.captureTpl||clone(DEFAULT_CAPTURE_TPL),controls:s.controls||clone(DEFAULT_CONTROLS)};return!!s}
 /* migración: copia previa, cambios aditivos y una sola transacción; no se repite al reiniciar */
 async function migrateAll(){const olds=S.patients.filter(p=>(p.schema||0)<SCHEMA);if(!olds.length)return;
@@ -189,6 +189,7 @@ async function migrateAll(){const olds=S.patients.filter(p=>(p.schema||0)<SCHEMA
     await migrateAll();
     if(!had){await Store.put('kv',S.settings,'settings');if(!S.patients.length)await seedDemo()}}
   catch(e){console.error('arranque',e&&e.name);toast('No se pudieron leer los datos guardados. No se modificó nada; recarga la página.',8000)}
+  if(typeof extInit==='function')await extInit();
   brand();render();getDL();if(S.patients.some(p=>!p.demo))Store.persist();
   window.__ready=true;
 })();

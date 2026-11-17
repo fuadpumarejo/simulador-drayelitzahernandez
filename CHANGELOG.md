@@ -1,5 +1,51 @@
 # Registro de cambios
 
+## 1.4.0 · 2026-11-16
+
+- Servicios de estética: precio por zona y por sesión con historial de cambios.
+- Tratamientos: abonos, saldo por cobrar, abonado por adelantado, sesiones pendientes y su valor.
+- Productos: catálogo con foto y precio; ventas por paciente, pagadas o por cobrar.
+- Indicadores: panel de valores mensual, trimestral y anual con proyección de citas reservadas, tabla por servicio, productos más vendidos y precios vigentes.
+- Límites: no descuenta inventario, no emite recibos ni facturas, y las cirugías no entran en este panel (siguen en propuestas). Probado solo con datos ficticios.
+
+## 1.3.1 · 2026-11-16
+
+- Instalación: botón «Instalar en este equipo» cuando el navegador lo ofrece; instrucciones para iPhone, iPad y Android; aviso cuando se abre en una vista previa donde no se puede instalar. Probado con el evento simulado; la instalación real en equipos físicos sigue pendiente de validar.
+- Servicios de estética: precio de referencia por sesión en el catálogo, valor en cada sesión y total por servicio en el panel de indicadores (no es registro de pagos).
+
+## 1.3.0 · 2026-11-16
+
+- Vista de consulta (botón en la barra): oculta Acompañamiento, base de contactos, indicadores, etapa comercial, seguimiento, recordatorios, respaldos y ajustes. Se conserva al recargar.
+- «Prospección» pasa a llamarse «Acompañamiento».
+- Base de contactos unificada con filtros y exportación a Excel; importación masiva desde Excel, CSV o texto pegado con control de repetidos.
+- Panel de indicadores con conversión de la base, servicios consumidos, procedimientos más consultados, género y país.
+- Pestaña «Estrategia y SEO» con lista de posicionamiento local e internacional.
+- Género, país y ciudad en ficha e intereses. El embudo muestra 15 tarjetas por columna y remite a la base.
+- Pendiente de validar: importación con archivos reales de la clínica (solo se probó con datos ficticios, incluidos 300 contactos de prueba); pantallas nuevas en iPhone y iPad físicos.
+
+## 1.2.0 · 2026-11-16
+
+### Nuevo
+- **Prospección** como sección principal: embudo con intereses y oportunidades, registro de contactos, «Agendar valoración» desde un interés, enlaces de campaña a WhatsApp con referencia, plantillas de mensaje y resultados por fuente o campaña.
+- **Tratamientos estéticos** por paciente: láser diodo, toxina botulínica y limpieza facial de fábrica; catálogo de servicios editable (zonas, sesiones, intervalo, tipo de registro). Registro de cada sesión con sus parámetros, cita tentativa para la siguiente y tablero de tratamientos en curso.
+- **Recordatorios de tratamientos** en «Hoy» y en la Agenda, con mensaje listo para WhatsApp y respeto de la preferencia de contacto.
+- **Contenido para redes:** plan editorial, ideas, detección de expresiones de riesgo, verificación en cuatro puntos y piezas antes/después en tres formatos, condicionadas a la autorización de difusión pública. Paquete con imagen, texto y verificación.
+- **Calendarios:** enlaces «añadir a» Google, Outlook y Office 365; exportación de toda la agenda en `.ics`; importación de un `.ics` externo como bloqueos (con repeticiones simples).
+- **Aplicación instalable** (manifiesto, íconos y funcionamiento sin conexión).
+- **Carpeta compartida** con archivos cifrados por caso, detección de conflictos y copia de recuperación.
+
+### Cambiado
+- La navegación tiene cinco destinos: Hoy, Pacientes, Prospección, Agenda y Más.
+- La ficha suma la pestaña «Tratamientos estéticos».
+- El respaldo completo incluye campañas y publicaciones.
+- Cualquier cambio en fotos o documentos actualiza la fecha de modificación del caso.
+
+### Sin cambios de formato
+El esquema de datos sigue en 3. Los paquetes `.yhcase` y `.yhbackup` de la versión 1.1 se abren igual.
+
+### No incluido
+Sincronización en la nube en tiempo real, envío automático de mensajes, conexión directa con las cuentas de Google, Microsoft o Apple, publicación automática en redes, aplicación en tiendas (App Store, Microsoft Store) y registro de pagos.
+
 ## 1.1.0-R6 · 2026-11-16
 
 Evolución de la versión 2 según el Encargo Maestro R6. El motor de simulación WebGL, los módulos, el catálogo y los tiempos quirúrgicos se conservan sin cambios de comportamiento.

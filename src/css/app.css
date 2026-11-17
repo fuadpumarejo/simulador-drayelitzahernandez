@@ -254,7 +254,7 @@ details.card[open]>summary{margin-bottom:12px}
 .pat-mode .bar,.pat-mode .botnav{display:none!important}
 @media (max-width:900px){
   .nav.top{display:none}
-  .botnav{display:grid;grid-template-columns:repeat(4,1fr);position:fixed;left:0;right:0;bottom:0;z-index:30;background:var(--surface);border-top:1px solid var(--line);padding:4px 4px calc(4px + env(safe-area-inset-bottom))}
+  .botnav{display:grid;grid-template-columns:repeat(5,1fr);position:fixed;left:0;right:0;bottom:0;z-index:30;background:var(--surface);border-top:1px solid var(--line);padding:4px 4px calc(4px + env(safe-area-inset-bottom))}
   .botnav button{border:0;background:none;padding:8px 2px;font-weight:600;font-size:12px;color:var(--muted);min-height:48px;border-radius:10px;cursor:pointer}
   .botnav button[aria-current="page"]{color:var(--accent);background:var(--accent-soft)}
   main{padding-bottom:calc(96px + env(safe-area-inset-bottom))}
@@ -280,3 +280,15 @@ details.card[open]>summary{margin-bottom:12px}
 .bar{padding-top:max(10px,env(safe-area-inset-top))}
 .stage.present .illus{top:calc(10px + env(safe-area-inset-top))}
 .stage.present .stage-ui{bottom:calc(8px + env(safe-area-inset-bottom))}
+.board{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:12px;align-items:start}
+.bcol{background:var(--surface-2);border-radius:var(--r);padding:10px;display:flex;flex-direction:column;gap:8px;min-width:0}
+a.btn{text-decoration:none}
+@media (max-width:900px){.botnav button{font-size:11px;padding:8px 0}}
+.bars{display:flex;flex-direction:column;gap:6px}.hb{display:grid;grid-template-columns:minmax(120px,44%) 1fr auto;gap:10px;align-items:center;font-size:14px}.hb .bt{height:12px;background:var(--surface-2);border-radius:99px;overflow:hidden}.hb .bt i{display:block;height:100%;background:var(--accent);border-radius:99px}.hb .bl{overflow:hidden;text-overflow:ellipsis}
+.bfil{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px}.bfil .in{width:100%;min-width:0}
+/* vista de consulta: oculta lo administrativo y comercial mientras la paciente ve la pantalla */
+body.consulta .adm,body.consulta .pitem .right,body.consulta [data-act="treatToOpp"],body.consulta [data-act="treatRemind"],body.consulta [data-act="waDraft"]{display:none!important}
+#modeBtn{cursor:pointer;white-space:nowrap}#modeBtn[aria-pressed="true"]{background:var(--accent);color:#fff;border-color:var(--accent)}
+@media (max-width:600px){.brand span{display:none}.brand{flex:1 1 120px}.bar .chip{font-size:11px;padding:4px 8px}}
+.kpi.mini{grid-template-columns:repeat(auto-fit,minmax(130px,1fr))}.kpi.mini b{font-size:18px}.kpi .card.warn{border-color:var(--warn,#b7791f)}.mny td{vertical-align:middle}.mny .bt{display:inline-block;width:90px;height:10px;background:var(--surface-2);border-radius:99px;overflow:hidden;vertical-align:middle;margin-right:8px}.mny .bt i{display:block;height:100%;background:var(--accent);border-radius:99px}.mny .bt i.g{background:var(--good)}.mny .bt i.r{background:repeating-linear-gradient(45deg,var(--accent),var(--accent) 4px,var(--accent-soft) 4px,var(--accent-soft) 8px)}.mny tr.cur td{font-weight:600}
+.pgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:12px}.pcard .pimg{aspect-ratio:1;background:var(--surface-2);border-radius:12px;display:flex;align-items:center;justify-content:center;overflow:hidden}.pcard .pimg img{width:100%;height:100%;object-fit:cover}.pprice{font-family:var(--display);font-size:20px}.mny .bt i.p{background:var(--warn)}

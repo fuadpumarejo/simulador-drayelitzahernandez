@@ -26,7 +26,7 @@ const CAP=[['pendiente','Pendiente de captura'],['en_captura','En captura'],['li
 const CAPL=Object.fromEntries(CAP);
 const VISIT_TYPES=[['valoracion','Valoración'],['control','Control'],['fotos','Sesión de fotos'],['procedimiento','Procedimiento'],['otra','Otra atención']];
 const VISIT_TYPE=Object.fromEntries(VISIT_TYPES);
-const APPT_TYPES=[['valoracion','Valoración'],['fotos','Captura de fotos'],['preop','Preoperatorio'],['procedimiento','Procedimiento'],['control','Control'],['seguimiento','Seguimiento administrativo']];
+const APPT_TYPES=[['valoracion','Valoración'],['fotos','Captura de fotos'],['preop','Preoperatorio'],['procedimiento','Procedimiento'],['control','Control'],['seguimiento','Seguimiento administrativo'],['sesion','Sesión de estética']];
 const APPT_TYPE=Object.fromEntries(APPT_TYPES);
 const APPT_ST=[['tentative','Tentativa'],['scheduled','Programada'],['confirmed','Confirmada'],['checked_in','Llegó'],['completed','Finalizada'],['cancelled','Cancelada'],['no_show','No asistió']];
 const APPT_STL=Object.fromEntries(APPT_ST);
@@ -54,7 +54,7 @@ Object.assign(DEFAULT_SETTINGS,{tool:'Simulador SKIND',tz:'America/Bogota',schem
 /* ---- fábricas ---- */
 const emptyConsents=()=>Object.fromEntries(CONSENTS.map(([k])=>[k,{ok:false,date:'',note:''}]));
 function newPatient(o={}){const t=Date.now();return{id:uid(),schema:SCHEMA,name:'',doc:'',birth:'',phone:'',email:'',notes:'',clinicalNotes:'',consents:emptyConsents(),contact:{channel:'',allowed:'sin_registro',at:'',hist:[]},
-  visits:[],appts:[],episodes:[],opps:[],tasks:[],log:[],createdAt:t,updatedAt:t,...o}}
+  visits:[],appts:[],episodes:[],opps:[],tasks:[],log:[],treatments:[],createdAt:t,updatedAt:t,...o}}
 function newVisit(o={}){return{id:uid(),type:'valoracion',date:today(),dateSrc:'registro',phase:'consulta',cap:'pendiente',regions:[],slots:[],notes:'',apptId:null,episodeId:null,createdAt:nowISO(),...o}}
 function newAppt(o={}){return{id:uid(),type:'valoracion',date:today(),time:'09:00',dur:S.settings.apptDur||30,tz:S.settings.tz||'America/Bogota',mode:'presencial',prof:S.settings.doctor||'',place:'',status:'scheduled',note:'',hist:[],visitId:null,episodeId:null,oppId:null,seq:0,icsAt:null,createdAt:nowISO(),...o}}
 function newOpp(o={}){return{id:uid(),title:'',interests:[],stage:'val_realizada',stageHist:[],source:'',openedAt:today(),closedAt:'',window:null,tentative:'',reviewAt:'',question:'',motivation:'',nextStep:'',plan:[],discount:0,planNotes:'',quotes:[],episodeId:null,apptId:null,notes:'',closeReason:'',...o}}
@@ -112,8 +112,8 @@ function migratePhoto(ph){
 const legacyReview=p=>(p.opps||[]).some(o=>o.review)||(p.tasks||[]).some(t=>t.review);
 
 /* ---- proyecciones: una sola fuente de fechas para calendario, ficha y PDF ---- */
-function apptLayer(a){return a.type==='procedimiento'?'cirugia':a.type==='control'?'control':a.type==='seguimiento'?'seguimiento':'cita'}
-const LAYERS=[['cita','Citas'],['cirugia','Cirugías programadas'],['control','Controles'],['seguimiento','Seguimientos'],['tentativo','Hitos tentativos']];
+function apptLayer(a){return a.type==='sesion'?'sesion':a.type==='procedimiento'?'cirugia':a.type==='control'?'control':a.type==='seguimiento'?'seguimiento':'cita'}
+const LAYERS=[['cita','Citas'],['cirugia','Cirugías programadas'],['control','Controles'],['seguimiento','Seguimientos'],['tentativo','Hitos tentativos'],['sesion','Sesiones de estética'],['externo','Otros calendarios'],['contenido','Contenido para redes']];
 function agendaItems(){const out=[];
   for(const p of S.patients){
     for(const a of p.appts||[])out.push({kind:'appt',layer:apptLayer(a),date:a.date,time:a.time,dur:a.dur,status:a.status,title:APPT_TYPE[a.type]||'Cita',who:p.name||'Sin nombre',pid:p.id,id:a.id,ref:a,tent:a.status==='tentative',closed:!APPT_OPEN.includes(a.status)});
@@ -121,7 +121,8 @@ function agendaItems(){const out=[];
     for(const o of p.opps||[]){if(!STAGE_OPEN.includes(o.stage)&&o.stage!=='programada')continue;if(o.apptId)continue;
       if(o.tentative)out.push({kind:'tent',layer:'tentativo',date:o.tentative,time:'',title:'Fecha tentativa (sin reserva)',who:p.name||'Sin nombre',pid:p.id,id:o.id,ref:o,tent:true});
       else{const r=windowRange(o.window);if(r)out.push({kind:'window',layer:'tentativo',date:r[0],to:r[1],time:'',title:'Ventana deseada (sin reserva): '+windowLabel(o.window),who:p.name||'Sin nombre',pid:p.id,id:o.id,ref:o,tent:true})}}}
-  for(const b of S.blocks||[])out.push({kind:'block',layer:'cita',date:b.date,time:b.time,dur:b.dur,status:'scheduled',title:b.title||'Bloqueo administrativo',who:'',pid:null,id:b.id,ref:b});
+  if(typeof extraAgenda==='function')extraAgenda(out);
+  for(const b of S.blocks||[])out.push({kind:'block',layer:b.ext?'externo':'cita',date:b.date,time:b.time,dur:b.dur,status:'scheduled',title:b.title||'Bloqueo administrativo',who:'',pid:null,id:b.id,ref:b});
   return out.sort((a,b)=>(a.date+(a.time||'00:00')).localeCompare(b.date+(b.time||'00:00')))}
 function overlaps(a,pid){if(!a.time||!APPT_OPEN.includes(a.status))return[];const s=m=>{const[h,mi]=m.split(':').map(Number);return h*60+mi},a0=s(a.time),a1=a0+fin(a.dur,30);
   return agendaItems().filter(x=>(x.kind==='appt'||x.kind==='block')&&x.id!==a.id&&x.date===a.date&&x.time&&!x.closed&&!x.tent&&(x.kind==='block'||(x.ref.prof||'')===(a.prof||''))&&s(x.time)<a1&&s(x.time)+fin(x.dur,30)>a0)}
@@ -148,6 +149,7 @@ function timeline(p,photos=[],docs=[]){const ev=[];const add=(date,cls,title,not
   const byDay={};for(const ph of photos){const d=photoDate(ph);if(d)byDay[d+'|'+(ph.phase==='posoperatoria'?'pos':'pre')]=(byDay[d+'|'+(ph.phase==='posoperatoria'?'pos':'pre')]||0)+1}
   for(const k in byDay){const[d,t]=k.split('|');add(d,'clinico',`${byDay[k]} fotografía(s) ${t==='pos'?'posoperatorias reales':'tomadas'}`)}
   for(const d of docs)add(d.documentDate||d.uploadedAt,'admin','Documento: '+d.displayName,d.category);
+  for(const t of p.treatments||[])for(const s of t.sessions||[])add(s.date,'clinico',`${t.name}: sesión ${s.n}${t.planned?' de '+t.planned:''}`,(s.zones||[]).join(', '));
   for(const j of p.log||[])add(j.date,j.src==='legado'?'legado':'admin',j.type,j.note);
   return ev.sort((a,b)=>b.date.localeCompare(a.date))}
 const TL_CLS={clinico:'Hecho clínico',agenda:'Agenda',comercial:'Comercial',admin:'Administrativo',legado:'Registro anterior'};

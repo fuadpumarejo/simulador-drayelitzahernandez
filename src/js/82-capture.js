@@ -39,7 +39,7 @@ async function wizCreatePatient(withPhotos){const w=ui.wiz;w.name=$('#w_name').v
   const dup=S.patients.find(p=>p.name&&p.name.trim().toLowerCase()===w.name.toLowerCase());
   if(dup&&!w.dupOk){if(await confirmBox('Ya existe una ficha con ese nombre',`Hay una paciente llamada «${dup.name}». ¿Quieres abrir esa ficha en lugar de crear otra?`,'Abrir la ficha existente',{cancel:'Crear una nueva'})){ui.wiz=null;S.pid=dup.id;await go('patient',{tab:'resumen'});return false}w.dupOk=true}
   const p=newPatient({name:w.name,phone:w.phone,notes:w.notes});const d=today();if(w.cData)p.consents.data={ok:true,date:d,note:''};if(w.cPhoto)p.consents.photo={ok:true,date:d,note:''};
-  if(w.lead){const l=S.leads.find(x=>x.id===w.lead);if(l){l.status='convertido';l.patientId=p.id;saveKV('leads');p.contact.channel=l.channel||'';p.contact.allowed=l.permission||'sin_registro';p.opps.push(newOpp({stage:'nuevo',interests:l.interest?[l.interest]:[],source:l.source||'',inquiryId:l.id,openedAt:l.createdAt}))}}
+  if(w.lead){const l=S.leads.find(x=>x.id===w.lead);if(l){l.status='convertido';l.patientId=p.id;saveKV('leads');p.gender=l.gender||'';p.country=l.country||'';if(l.email)p.email=l.email;p.contact.channel=l.channel||'';p.contact.allowed=l.permission||'sin_registro';p.opps.push(newOpp({stage:'nuevo',interests:l.interest?[l.interest]:[],source:l.source||'',campaign:l.campaign||'',inquiryId:l.id,openedAt:l.createdAt}))}}
   S.patients.push(p);S.pid=p.id;savePatient(p);Store.persist();w.pid=p.id;w.created=true;return true}
 async function wizStart(way){const w=ui.wiz,p=S.patients.find(x=>x.id===w.pid);if(!p)return;
   if(!p.consents.photo.ok){toast('Registra primero la autorización de fotografías clínicas en el Resumen de la ficha.',5000);return}

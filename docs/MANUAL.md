@@ -81,3 +81,75 @@ Al restaurar puedes **agregar** los pacientes que no están en el equipo (no toc
 **Una foto HEIC no abre.** En el iPhone, toma la foto desde la herramienta, o cambia Ajustes > Cámara > Formatos > «Más compatible».
 
 **La imagen queda en blanco en el editor.** El navegador liberó memoria gráfica. Vuelve a la galería y abre la foto de nuevo; los ajustes guardados no se pierden.
+
+## 10. Acompañamiento (antes «Prospección»)
+
+1. **Acompañamiento → Registrar interés** cuando alguien pregunta: nombre, WhatsApp, qué le interesa y cómo llegó.
+2. En el **embudo**, cada tarjeta ofrece: *Mensaje* (abre WhatsApp con una plantilla), *Registrar contacto* (qué pasó y cuándo retomar, si se acordó) y *Agendar valoración* (crea la ficha y la cita).
+3. Después de la valoración, la tarjeta avanza sola según lo que ocurra: propuesta entregada, en consideración, cirugía programada.
+4. **Campañas y enlaces:** escribe el WhatsApp de la clínica y crea una campaña. El enlace lleva una referencia; ponlo en la biografía de Instagram, en historias o en anuncios. Cuando alguien escriba con esa referencia, regístralo con esa campaña.
+5. **Resultados** muestra, por fuente o campaña, cuántos intereses llegaron a valoración, propuesta y cirugía programada.
+
+Quien pida no ser contactada queda marcada y no se le pueden preparar mensajes.
+
+## 11. Tratamientos por sesiones (láser, toxina, limpiezas)
+
+1. En la ficha, **Tratamientos estéticos → Nuevo tratamiento**. Elige el servicio, las zonas, las sesiones previstas y los días entre sesiones.
+2. **Registrar sesión** después de cada aplicación. En láser se anotan fluencia, pulso y frecuencia; en toxina, producto, cantidad y lote. Los valores de la sesión anterior aparecen como punto de partida.
+3. Puedes dejar creada una **cita tentativa** para la siguiente, o dejar que el sistema te la recuerde.
+4. **Más → Servicios de estética** muestra todos los tratamientos en curso y permite editar el catálogo o agregar servicios nuevos.
+
+El número de sesiones y los intervalos son referencias de agenda editables. La herramienta no sugiere parámetros.
+
+## 12. Recordatorios
+
+«Hoy» lista a quienes les corresponde su próxima sesión o control en los siguientes 7 días y no tienen cita. **Mensaje** abre WhatsApp con el texto; al confirmar «Ya lo envié» queda marcado. Solo aparece para quienes autorizan contacto. La herramienta no envía nada por su cuenta.
+
+## 13. Calendarios de Google, Outlook y iPhone
+
+- En el detalle de una cita: **Google Calendar**, **Outlook**, **Office 365** o **Calendario iPhone (.ics)**.
+- En Agenda: **Exportar agenda (.ics)** lleva todas las citas futuras de una vez.
+- **Traer otro calendario (.ics):** exporta tu calendario desde Google, Outlook o iCloud y tráelo. Sus eventos aparecen como bloqueos y avisan si una cita se cruza. Para actualizarlo, tráelo de nuevo con el mismo nombre.
+- El asunto de los eventos es siempre neutro («Cita» y el nombre de la clínica), sin nombre de la paciente ni motivo.
+
+## 14. Instalar la aplicación y compartir entre equipos
+
+**Más → Instalar y carpeta compartida** tiene los pasos para iPhone, iPad, Windows y Mac.
+
+Para dos computadores: **Elegir carpeta** (una carpeta de iCloud Drive, OneDrive, Google Drive o Dropbox), definir una contraseña y usar la misma en el otro equipo. Se sincroniza al abrir, cada minuto y medio y con el botón.
+
+Para el iPhone o iPad: **Exportar caso editable** y guardarlo en esa misma carpeta desde «Archivos». Para traer uno: **Importar caso** y elegirlo allí.
+
+## 15. Contenido para redes
+
+**Más → Contenido para redes.** Parte de **Ideas de contenido**, escribe el texto y usa **Verificar y dejar listo**. Las piezas antes/después solo se generan con casos de la Biblioteca cuya paciente tenga la autorización de **Difusión pública**. La publicación se hace a mano en cada red.
+
+## 16. Vista de consulta
+
+Toca **Vista de consulta** en la barra superior antes de mostrar la pantalla a la paciente. Desaparecen Acompañamiento, la base de contactos, los indicadores, la etapa comercial, el seguimiento, los recordatorios, los respaldos y los ajustes. Quedan la ficha, las fotografías y simulaciones, las visitas, la propuesta, los documentos, la agenda y la biblioteca de casos. Para volver, toca **En consulta · salir**. La elección se conserva al cerrar y abrir.
+
+Hoy, Pacientes y Agenda siguen mostrando nombres de otras pacientes: abre la ficha antes de girar la pantalla.
+
+## 17. Base de contactos e importación
+
+**Pacientes → Base de contactos** reúne a quienes tienen ficha y a quienes solo han escrito. Filtra por tipo de servicio (cirugía plástica, láser diodo, toxina, limpieza facial), procedimiento, género, país y si ya tienen un servicio realizado. **Exportar lo filtrado a Excel** descarga la lista con teléfonos y correos.
+
+**Importar contactos** acepta un archivo de Excel o CSV, o una lista pegada, con una persona por fila. Columnas reconocidas: nombre, teléfono o WhatsApp, correo, interés o servicio, género, país y origen. Quien ya está (mismo teléfono) se omite. Los importados entran como intereses sin ficha y con permiso de contacto «sin registro».
+
+## 18. Panel de indicadores y estrategia
+
+**Más → Indicadores** muestra cuántas personas de la base tienen ficha, valoración y algún servicio realizado, con su porcentaje; qué servicios consumen quienes ya son pacientes; los procedimientos más consultados; y la composición por género y país. Para que los porcentajes sean reales, la base debe incluir a todas las personas que han escrito y cada servicio debe estar registrado en la ficha.
+
+**Acompañamiento → Estrategia y SEO** es una lista de trabajo para posicionamiento local e internacional. Es una guía general; la publicidad de servicios de salud tiene reglas que conviene revisar con asesoría.
+
+## 19. Precios, abonos y productos
+
+**Precios.** En **Más → Servicios de estética**, cada servicio tiene un precio de referencia por sesión y un precio por zona (axilas, bikini, bozo…). Si un plan tiene zonas con precio, la sesión vale la suma de esas zonas. Cada cambio queda en el historial; los planes y sesiones ya registrados conservan su valor.
+
+**Abonos.** En la ficha, pestaña **Estética y productos**, cada tratamiento muestra valor por sesión, realizado, abonado y saldo. **Registrar abono** anota fecha, valor y medio. Si lo abonado supera lo realizado, aparece como «abonado por adelantado» (sesiones pagadas por realizar).
+
+**Productos.** En **Más → Productos** se crea el catálogo con nombre, marca, presentación, precio, descripción y foto. En la ficha, **Registrar venta de producto** asocia el producto a la paciente, con cantidad y si quedó pagado.
+
+**Panel.** **Más → Indicadores → Estética y productos** agrupa por mes, trimestre o año: sesiones realizadas, productos vendidos, abonos y, hacia adelante, las citas de sesión ya reservadas. También muestra sesiones pendientes de los planes activos y su valor.
+
+Es un control interno: no reemplaza la contabilidad ni la factura, y no lleva inventario.

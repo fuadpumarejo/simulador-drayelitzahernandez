@@ -4,7 +4,7 @@ Generada el 16/11/2026 a partir de `tests/out/resultados.json`. Todas las prueba
 
 **Entorno:** Google Chrome sin interfaz (WebGL por software) controlado con Playwright, sobre `index.html` servido en local, con las solicitudes a otros dominios bloqueadas. Móvil y tableta se **emularon** (tamaño, táctil y densidad); no se probó en un iPhone o iPad físico.
 
-**Resumen:** Aprobada (automática): 92 · No implementado: 6 · Parcial: 21 · Pendiente en dispositivo real: 1. Verificaciones automatizadas ejecutadas: 140, aprobadas: 140.
+**Resumen:** Aprobada (automática): 93 · No implementado: 1 · Parcial: 25 · Pendiente en dispositivo real: 1. Verificaciones automatizadas ejecutadas: 174, aprobadas: 174.
 
 Cómo leer los estados:
 
@@ -15,7 +15,7 @@ Cómo leer los estados:
 
 | Prueba | Qué verifica | Estado | Evidencia o pendiente |
 |---|---|---|---|
-| T01 | Exportar caso editable con fotos, simulaciones, pincel y máscaras | Aprobada (automática) | C7097E1_2026-11-16.yhcase 1187 KB cifrado, sin nombre ni JPEG legible |
+| T01 | Exportar caso editable con fotos, simulaciones, pincel y máscaras | Aprobada (automática) | CE2979A_2026-11-16.yhcase 1187 KB cifrado, sin nombre ni JPEG legible |
 | T02 | Importar en otro navegador: todo editable e idéntico | Parcial | Verificado entre dos contextos de navegador aislados. Falta el traslado físico iPhone → PC por AirDrop o cable. |
 | T03 | Editar en el segundo equipo y volver a importar | Aprobada (automática) | revisión del 2º equipo aplicada; otras pacientes sin cambios |
 | T04 | Importar dos veces el mismo archivo | Aprobada (automática) | duplicado detectado; «conservar ambas» crea ficha aparte con IDs nuevos y vínculos íntegros |
@@ -43,7 +43,7 @@ Cómo leer los estados:
 | T26 | Segunda visita o control con su propio plan | Aprobada (automática) | segunda visita (control) con su propia fecha y plan, sin tocar la primera |
 | T27 | Migrar fotos antiguas con etiqueta sin inventar datos | Aprobada (automática) | foto con label conserva propuesta sin confirmar; ficha sin plan no genera oportunidad |
 | T28 | Paciente sin autorización de fotografías | Aprobada (automática) | sin autorización de fotos no deja pasar a captura |
-| T29 | Descargar original individual | Aprobada (automática) | C51A59F_sin-fecha_cara-y-cuello_frontal_original_censurada.jpg |
+| T29 | Descargar original individual | Aprobada (automática) | CA19433_sin-fecha_cara-y-cuello_frontal_original_censurada.jpg |
 | T30 | Descargar simulación individual | Aprobada (automática) | simulación etiquetada y censurada |
 | T31 | Descargar selección múltiple en ZIP | Aprobada (automática) | 10 archivos, manifiesto, sin PII en nombres |
 | T32 | Descargar comparación | Aprobada (automática) | comparación con censura en ambos lados |
@@ -56,11 +56,11 @@ Cómo leer los estados:
 | T39 | Sin consentimiento no entra a la biblioteca | Aprobada (automática) | sin autorización de uso en consulta: no entra a la biblioteca |
 | T40 | Caso aprobado visible en modo paciente, sin datos internos | Parcial | Biblioteca básica con casos de simulación y pares reales; sin álbumes ni etiquetas. |
 | T41 | Revocar autorización bloquea el caso | Parcial | Verificado para la autorización de uso en consulta. No existe flujo de difusión pública. |
-| T42 | Redes: carrusel antes/después 1:1, 4:5 y 9:16 | No implementado | Estudio de contenido para redes: no implementado (prioridad P2). |
-| T43 | Redes: copy y verificación | No implementado | No implementado (P2). |
-| T44 | Redes: paquete de publicación | No implementado | No implementado (P2). |
-| T45 | Simulación o IA en biblioteca o redes | No implementado | La biblioteca separa «Simulación ilustrativa» de «Antes / después real» (ver T40). La parte de redes no está implementada. |
-| T46 | Programar publicación en calendario editorial | No implementado | No implementado (P2). |
+| T42 | Redes: carrusel antes/después 1:1, 4:5 y 9:16 | Parcial | Pieza antes/después en 1:1, 4:5 y 9:16 con rótulo y censura. Una imagen por pieza: sin carrusel de varias láminas ni zonas seguras por red. |
+| T43 | Redes: copy y verificación | Parcial | Detecta expresiones de riesgo y exige cuatro verificaciones. No reemplaza la revisión de la doctora ni la normativa de publicidad en salud. |
+| T44 | Redes: paquete de publicación | Parcial | ZIP con imagen, texto y verificación. |
+| T45 | Simulación o IA en biblioteca o redes | Aprobada (automática) | Cubierta por T40, S-pieza |
+| T46 | Programar publicación en calendario editorial | Parcial | Las publicaciones con fecha aparecen en la Agenda y se marcan publicadas a mano. No hay publicación automática. |
 | T47 | Cuota insuficiente o archivo muy grande | Aprobada (automática) | cuota excedida: no declara «Guardado», conserva el cambio abierto y reintenta sin perderlo |
 | T48 | Caso ampliado con documentos: transferencia completa | Aprobada (automática) | variante ampliada: documentos y PDF emitidos viajan y se restauran completos |
 | T49 | Crear cita en el calendario y verla en la ficha | Aprobada (automática) | cita creada en el calendario aparece en la ficha con el mismo ID; no crea visita |
@@ -149,6 +149,40 @@ Cómo leer los estados:
 | SEG-ids | Aprobada | identificadores con caracteres no permitidos: paquete rechazado completo |
 | SEG-img | Aprobada | miniatura con contenido que no es imagen base64 se descarta al importar |
 | SEG-xss | Aprobada | texto de usuario escapado: no se ejecuta HTML inyectado |
+| P-campaña | Aprobada | enlace de campaña a WhatsApp con referencia medible |
+| P-mensaje | Aprobada | mensaje desde plantilla; se abre en WhatsApp y se registra solo al confirmar el envío |
+| P-embudo | Aprobada | interés → contacto → valoración agendada con ficha; sin visita ni autorizaciones inventadas |
+| P-fuentes | Aprobada | resultados por campaña con su advertencia |
+| P-consent | Aprobada | quien no autoriza contacto no recibe mensajes |
+| C-enlaces | Aprobada | enlaces para Google, Outlook y Office 365 con hora local y asunto neutro |
+| C-ics-todo | Aprobada | agenda completa en un solo .ics |
+| C-importar | Aprobada | .ics externo: UTC convertido a hora local, día completo, repetición semanal, cancelado omitido; avisa cruces |
+| E-laser | Aprobada | láser diodo: zonas, sesión 1 de 6 con parámetros, próxima cita tentativa a 42 días y parámetros previos como punto de partida |
+| E-recordatorio | Aprobada | toxina a 120 días: recordatorio vencido en Hoy y Agenda; mensaje con plantilla; se marca enviado; sin botón para quien no autoriza contacto |
+| E-control | Aprobada | tablero de tratamientos en curso y catálogo editable |
+| S-bloqueo | Aprobada | texto con promesas se marca; sin autorización de difusión no hay pieza ni «listo» |
+| S-pieza | Aprobada | pieza 1:1, 4:5 y 9:16 rotulada; paquete con imagen, texto y verificación; publicación marcada a mano |
+| S-revoca | Aprobada | si se retira la autorización, la publicación queda marcada para no publicar o retirar |
+| X-carpeta | Aprobada | 4 casos cifrados enviados a la carpeta; el segundo equipo los recibe completos; sin cambios no reescribe |
+| X-vuelta | Aprobada | el cambio del segundo equipo vuelve al primero; queda copia de recuperación |
+| X-conflicto | Aprobada | si ambos equipos cambian el mismo caso no se pisa nada: se pregunta cuál conservar |
+| X-clave | Aprobada | carpeta con otra contraseña: se informa y no se importa nada |
+| A-instalable | Aprobada | manifiesto de aplicación e inicio sin conexión con los datos locales (instalación real en iPhone/Windows/Mac: pendiente de probar) |
+| H-pegar | Aprobada | lista pegada: reconoce columnas, omite el teléfono repetido y no presume autorización de contacto |
+| H-archivo | Aprobada | archivo CSV con columnas en otro orden; duplicado por teléfono omitido |
+| H-base | Aprobada | base unificada con filtros por servicio, procedimiento, género, país y tipo: [10, 3, 5, 3, 2, 2, 1, 1, 3, 6, 1] |
+| H-excel | Aprobada | Excel con lo filtrado: teléfonos, correos, género y país |
+| H-panel | Aprobada | panel: conversión de la base, servicios consumidos, sesiones y composición |
+| H-estrategia | Aprobada | lista de posicionamiento con avance guardado |
+| H-embudo | Aprobada | el tablero muestra 15 por columna y remite a la base |
+| H-ficha | Aprobada | género y país en la ficha |
+| H-convertir | Aprobada | al agendar, el interés pasa a ficha con sus datos |
+| H-consulta | Aprobada | vista de consulta: oculta acompañamiento, indicadores, etapa comercial y seguimiento; se conserva al recargar y se sale con un toque ([1, True, False], [0, 0], [0, 1, 0], 'patient', [True, 0, 'En consulta · salir'], 1) |
+| H-precios | Aprobada | precio de referencia por servicio, valor por sesión y total en el panel |
+| H-instalar | Aprobada | botón de instalación cuando el navegador lo ofrece (evento simulado; instalación real pendiente en equipos físicos) |
+| H-valores | Aprobada | precios por zona con historial; abono, saldo y sesiones pendientes por plan {'ref': 90000, 'done': 100000, 'paid': 250000, 'pend': 3, 'pendVal': 270000, 'plan': 540000, 'due': 0, 'adv': 150000} |
+| H-productos | Aprobada | catálogo de productos con foto reducida y venta asociada a la paciente |
+| H-panel-valores | Aprobada | panel de valores: mensual, trimestral y anual; abonos, saldos, reservado y pendiente |
 
 ## Cómo repetirlas
 

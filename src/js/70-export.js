@@ -104,12 +104,7 @@ async function exportAllXLS(){if(!xlsReady())return;const X=window.XLSX,wb=X.uti
   for(const[n,r,w]of[['Pacientes',a,[28,10,14,14,12,22,44,18,18,40,12]],['Procedimientos',b,[28,28,22,32,14,10,10,14]],['Agenda',c,[12,8,28,18,14,12]],['Seguimiento',d,[28,12,22,12,40,40]]]){const ws=X.utils.aoa_to_sheet(r);ws['!cols']=w.map(wch=>({wch}));X.utils.book_append_sheet(wb,ws,n)}
   await saveFile(`base-skind_${today()}.xlsx`,new Blob([X.write(wb,{type:'array',bookType:'xlsx'})]))}
 
-/* ---- .ics: asunto neutro, UID estable, zona horaria explícita ---- */
-function icsFor(a){const z=a.tz||'America/Bogota',st=a.date.replace(/-/g,'')+'T'+a.time.replace(':','')+'00',e=(()=>{const[h,m]=a.time.split(':').map(Number),tot=h*60+m+fin(a.dur,30),d=addDays(a.date,Math.floor(tot/1440));return d.replace(/-/g,'')+'T'+p2(Math.floor(tot%1440/60))+p2(tot%60)+'00'})();
-  let off='-0500';try{const parts=new Intl.DateTimeFormat('en-US',{timeZone:z,timeZoneName:'longOffset'}).formatToParts(dObj(a.date)).find(x=>x.type==='timeZoneName').value;const m=/GMT([+-])(\d{2}):?(\d{2})/.exec(parts);off=m?m[1]+m[2]+m[3]:'+0000'}catch(e){}
-  const now=new Date().toISOString().replace(/[-:]/g,'').slice(0,15)+'Z',stt=a.status==='cancelled'?'CANCELLED':a.status==='tentative'?'TENTATIVE':'CONFIRMED';
-  return['BEGIN:VCALENDAR','VERSION:2.0','PRODID:-//SKIND//Simulador R6//ES','CALSCALE:GREGORIAN','METHOD:PUBLISH','BEGIN:VTIMEZONE','TZID:'+z,'BEGIN:STANDARD','DTSTART:19700101T000000','TZOFFSETFROM:'+off,'TZOFFSETTO:'+off,'END:STANDARD','END:VTIMEZONE',
-    'BEGIN:VEVENT','UID:'+a.id+'@simulador-skind','DTSTAMP:'+now,'SEQUENCE:'+fin(a.seq),'DTSTART;TZID='+z+':'+st,'DTEND;TZID='+z+':'+e,'SUMMARY:Cita '+(S.settings.clinic||'clínica').replace(/[,;\\]/g,' '),'STATUS:'+stt,'TRANSP:OPAQUE','END:VEVENT','END:VCALENDAR'].join('\r\n')+'\r\n'}
+
 
 /* ---- contraseña de paquetes ---- */
 const passFields=()=>[{k:'pass',label:'Contraseña del archivo (mínimo 8 caracteres)',type:'password',required:true},{k:'pass2',label:'Repite la contraseña',type:'password',required:true},{k:'i',type:'info',label:'La contraseña no se guarda en el archivo ni en la herramienta. Sin ella no se puede abrir. Comunícala por un medio distinto al del archivo.'}];
@@ -132,7 +127,7 @@ async function exportBackupFlow(){
   await Sim.leave();await Saver.flush();const photos=await Store.all('photos'),docs=await Store.all('docs'),sz=estSize(photos,docs);
   const r=await formBox('Exportar respaldo completo',passFields(),'Exportar respaldo protegido',{validate:passCheck,intro:`Incluye ${S.patients.length} paciente(s), ${photos.length} foto(s), ${docs.length} documento(s) y los ajustes. Tamaño aproximado: ${fmtSize(sz)}. Sirve para recuperar o migrar la base, no para compartir una valoración.${sz>3e8?' Es un respaldo grande: en iPhone o iPad puede fallar por memoria; hazlo desde el computador.':''}`});
   if(!r)return;const pg=progressBox('Exportando respaldo protegido');
-  try{await pg.set(10,'Empaquetando…');const{zip}=await Portable.buildBackup(S.settings,{leads:S.leads,blocks:S.blocks,library:S.library},S.patients,photos,docs);
+  try{await pg.set(10,'Empaquetando…');const{zip}=await Portable.buildBackup(S.settings,{leads:S.leads,blocks:S.blocks,library:S.library,campaigns:S.campaigns,posts:S.posts},S.patients,photos,docs);
     const blob=await Portable.seal('yhbackup',zip,r.pass,(i,n)=>pg.set(30+i/n*65,'Cifrando…'));pg.close();if(await saveFile(`respaldo-skind_${today()}.yhbackup`,blob)){S.settings.lastBackup=nowISO();saveSettings()}}
   catch(e){pg.close();errBox('No se pudo exportar el respaldo',e.code?e.message:'Ocurrió un error (posible falta de memoria). La base sigue intacta. Prueba desde el computador o exporta casos por separado.')}}
 
@@ -189,7 +184,7 @@ async function importBase(pkg,size){
     const r=await formBox('Sustituir toda la base',[{k:'ok',type:'check',label:`Entiendo que se eliminarán los ${S.patients.length} paciente(s) que hay ahora en este equipo y se reemplazarán por los del archivo.`},{k:'bk',type:'check',label:'Ya exporté un respaldo de la base actual, o no lo necesito.'}],'Sustituir la base',{intro:'Recomendado: cancela, exporta primero un respaldo completo de la base actual (Más > Respaldos) y vuelve a importar.',validate:x=>x.ok&&x.bk?'':'Marca las dos casillas para continuar.'});
     if(!r)return;for(const s of['patients','photos','docs'])ops.push({op:'clear',store:s});
     for(const p of pkg.patients)ops.push({op:'put',store:'patients',value:p});for(const ph of pkg.photos)ops.push({op:'put',store:'photos',value:ph});for(const d of pkg.docs)ops.push({op:'put',store:'docs',value:d});
-    if(pkg.settings){ops.push({op:'put',store:'kv',value:{...clone(DEFAULT_SETTINGS),...pkg.settings,schema:SCHEMA},key:'settings'})}for(const k of['leads','blocks','library'])if(pkg.kv&&Array.isArray(pkg.kv[k]))ops.push({op:'put',store:'kv',value:pkg.kv[k],key:k})}
+    if(pkg.settings){ops.push({op:'put',store:'kv',value:{...clone(DEFAULT_SETTINGS),...pkg.settings,schema:SCHEMA},key:'settings'})}for(const k of['leads','blocks','library','campaigns','posts'])if(pkg.kv&&Array.isArray(pkg.kv[k]))ops.push({op:'put',store:'kv',value:pkg.kv[k],key:k})}
   else{const ids=new Set(nu.map(p=>p.id));for(const p of nu)ops.push({op:'put',store:'patients',value:p});for(const ph of pkg.photos)if(ids.has(ph.patientId))ops.push({op:'put',store:'photos',value:ph});for(const d of pkg.docs)if(ids.has(d.patientId))ops.push({op:'put',store:'docs',value:d})}
   const pg=progressBox('Restaurando');await pg.set(40,'Escribiendo en una sola operación…');
   try{await Store.atomic(ops)}catch(e){pg.close();console.error(e&&e.name);return errBox('No se restauró nada',isQuota(e)?'No hay espacio suficiente. La base quedó exactamente como estaba.':'La restauración falló y se canceló completa. La base quedó exactamente como estaba; puedes reintentar.')}

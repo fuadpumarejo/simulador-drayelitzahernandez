@@ -56,7 +56,7 @@ const Sim={loadedId:null,dirty:false,
   async commitSave(ph){
     if(ui.loaded&&this.loadedId===ph.id&&this.dirty){Object.assign(ph,Engine.state());const changed=Engine.hasBrush()||Object.keys(ph.mods||{}).some(k=>MODULES[k]&&modActive(ph,k));ph.after=changed?Engine.jpeg():null;scnStash(ph);this.dirty=false;
       try{ph.thumb=await safeThumb(ph)}catch(e){}
-      const p=S.patients.find(x=>x.id===ph.patientId);if(p){const first=ui.photos[0]&&ui.photos[0].id===ph.id;const v=p.visits.find(x=>x.id===ph.visitId);let ch=false;if(first&&p.thumb!==ph.thumb){p.thumb=ph.thumb;ch=true}if(v&&v.cap==='lista'&&changed){v.cap='en_valoracion';ch=true}if(ch)savePatient(p)}}
+      const p=S.patients.find(x=>x.id===ph.patientId);if(p){const first=ui.photos[0]&&ui.photos[0].id===ph.id;const v=p.visits.find(x=>x.id===ph.visitId);let ch=false;if(first&&p.thumb!==ph.thumb){p.thumb=ph.thumb;ch=true}if(v&&v.cap==='lista'&&changed){v.cap='en_valoracion';ch=true}savePatient(p)}}
     ph.updatedAt=Date.now();await Store.put('photos',ph)},
   async leave(){await Saver.flushPrefix('photo:')}};
 

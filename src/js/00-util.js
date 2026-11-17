@@ -1,6 +1,6 @@
 "use strict";
 /* ============ utilidades ============ */
-const APP_VERSION='1.1.0-R6',SCHEMA=3;
+const APP_VERSION='1.4.0',SCHEMA=3;
 const $=(s,r=document)=>r.querySelector(s),$$=(s,r=document)=>[...r.querySelectorAll(s)];
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const uid=()=>{try{return crypto.randomUUID().replace(/-/g,'').slice(0,20)}catch(e){return Date.now().toString(36)+Math.random().toString(36).slice(2,12)}};
