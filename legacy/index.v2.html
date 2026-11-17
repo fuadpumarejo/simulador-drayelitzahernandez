@@ -1,0 +1,863 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="light">
+<title>Simulador Dra. Yelitza Hernández</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Albert+Sans:wght@400;500;600;700&family=Marcellus&display=swap" rel="stylesheet">
+<style>
+:root{
+  /* Tema único claro: blanco con morado. Idea: consultorio quirúrgico. El acento es el violeta de genciana del marcador de piel; los puntos anatómicos se dibujan como marcas de ese marcador. Barra fija, contenido en una columna, simulador a dos paneles. */
+  --bg:#FBFAFE; --surface:#FFFFFF; --surface-2:#F5F2FB; --ink:#241B36; --muted:#6F6782; --line:#E6E0F1;
+  --accent:#6A3FCF; --accent-ink:#FFFFFF; --accent-soft:#F1EBFC; --stage:#EEE9F8;
+  --good:#1F7A5A; --warn:#9A5B06; --crit:#B3323A; --good-soft:#E2F2EC; --warn-soft:#F8ECD8; --crit-soft:#F8E1E3;
+  --display:"Marcellus","Cormorant Garamond",Georgia,serif;
+  --body:"Albert Sans",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+  --r:12px; --shadow:0 1px 2px rgba(34,28,46,.06),0 6px 20px rgba(34,28,46,.06);
+  color-scheme:light;
+}
+*{box-sizing:border-box}
+html,body{margin:0;min-height:100%}
+body{background:var(--bg);color:var(--ink);font-family:var(--body);font-size:15px;line-height:1.45;-webkit-text-size-adjust:100%}
+h1,h2,h3{font-family:var(--display);font-weight:400;margin:0;text-wrap:balance;letter-spacing:.01em}
+h1{font-size:28px;line-height:1.15} h2{font-size:20px} h3{font-size:16px}
+button,input,select,textarea{font:inherit;color:inherit}
+input,select,textarea{font-size:16px}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.num{font-variant-numeric:tabular-nums}
+.muted{color:var(--muted)} .small{font-size:13px}
+.hide{display:none!important}
+
+/* barra */
+.bar{position:sticky;top:0;z-index:20;background:var(--surface);border-bottom:1px solid var(--line);display:flex;align-items:center;gap:12px;padding:10px 16px;flex-wrap:wrap}
+.brand{display:flex;align-items:center;gap:10px;min-width:0;flex:1 1 220px}
+.mono{width:38px;height:38px;border-radius:50%;border:1.5px dashed var(--accent);display:grid;place-items:center;font-family:var(--display);color:var(--accent);font-size:15px;letter-spacing:.04em;flex:none}
+.brand b{font-family:var(--display);font-weight:400;font-size:17px;display:block;line-height:1.1}
+.brand span{font-size:12px;color:var(--muted);display:block}
+.nav{display:flex;gap:4px}
+.nav button{border:0;background:none;padding:8px 12px;border-radius:999px;cursor:pointer;color:var(--muted);font-weight:500}
+.nav button[aria-current="page"]{background:var(--accent-soft);color:var(--accent)}
+.chip{font-size:12px;padding:3px 9px;border-radius:999px;background:var(--surface-2);border:1px solid var(--line);color:var(--muted);white-space:nowrap}
+.chip.ok{color:var(--good);background:var(--good-soft);border-color:transparent}
+.chip.warn{color:var(--warn);background:var(--warn-soft);border-color:transparent}
+.chip.crit{color:var(--crit);background:var(--crit-soft);border-color:transparent}
+.col{display:flex;flex-direction:column;gap:12px}
+.in.ref{border-color:var(--warn);background:var(--warn-soft)}
+.tl{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:8px}
+.tl li{display:flex;gap:10px;align-items:baseline;flex-wrap:wrap;padding-bottom:8px;border-bottom:1px solid var(--line)}
+.stage.present{position:fixed;inset:0;height:auto;z-index:40;border-radius:0;border:0}
+.stage.present #anchors{display:none}
+
+main{max-width:1240px;margin:0 auto;padding:20px 16px 64px;display:flex;flex-direction:column;gap:16px}
+.row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.spread{justify-content:space-between}
+.grow{flex:1 1 auto;min-width:0}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:16px}
+.btn{border:1px solid var(--line);background:var(--surface);padding:9px 14px;border-radius:10px;cursor:pointer;font-weight:600;display:inline-flex;align-items:center;gap:8px;min-height:40px;text-decoration:none;color:var(--ink)}
+.btn:hover{border-color:var(--accent)}
+.btn.primary{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+.btn.ghost{border-color:transparent;background:none;color:var(--accent)}
+.btn.danger{color:var(--crit)}
+.btn.sm{padding:5px 10px;min-height:32px;font-size:13px}
+.btn[disabled]{opacity:.45;cursor:not-allowed}
+.field{display:flex;flex-direction:column;gap:4px;min-width:0}
+.field label,.lbl{font-size:12px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.05em}
+.in{border:1px solid var(--line);background:var(--surface);border-radius:9px;padding:9px 10px;width:100%;min-height:40px}
+textarea.in{min-height:84px;resize:vertical}
+.grid2{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px}
+
+/* lista */
+.summary{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px}
+.summary .card{padding:12px 14px}
+.summary b{font-family:var(--display);font-weight:400;font-size:24px;display:block}
+.plist{display:flex;flex-direction:column;gap:8px}
+.pitem{display:grid;grid-template-columns:56px minmax(0,1fr) auto;gap:12px;align-items:center;background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:10px 12px;cursor:pointer;text-align:left;width:100%}
+.pitem:hover{border-color:var(--accent);box-shadow:var(--shadow)}
+.thumb{width:56px;height:56px;border-radius:10px;background:var(--surface-2);object-fit:cover;display:grid;place-items:center;color:var(--muted);font-family:var(--display);border:1px solid var(--line)}
+.pitem .name{font-weight:600;font-size:16px}
+.pitem .meta{display:flex;gap:6px;flex-wrap:wrap;margin-top:4px}
+.pitem .right{text-align:right;display:flex;flex-direction:column;gap:4px;align-items:flex-end}
+.pill{font-size:12px;font-weight:600;padding:3px 9px;border-radius:999px;background:var(--accent-soft);color:var(--accent);white-space:nowrap}
+.pill.s-prog{background:var(--warn-soft);color:var(--warn)} .pill.s-real{background:var(--good-soft);color:var(--good)} .pill.s-desc{background:var(--crit-soft);color:var(--crit)}
+
+.tabs{display:flex;gap:4px;border-bottom:1px solid var(--line);overflow-x:auto}
+.tabs button{border:0;background:none;padding:10px 14px;cursor:pointer;font-weight:600;color:var(--muted);border-bottom:2px solid transparent;white-space:nowrap}
+.tabs button[aria-selected="true"]{color:var(--accent);border-bottom-color:var(--accent)}
+
+/* simulador */
+.strip{display:flex;gap:8px;overflow-x:auto;padding-bottom:4px;align-items:stretch}
+.ph{flex:none;width:76px;border:2px solid transparent;border-radius:10px;background:none;padding:0;cursor:pointer;display:flex;flex-direction:column;gap:3px;align-items:center;font-size:11px;color:var(--muted)}
+.ph img{width:72px;height:72px;object-fit:cover;border-radius:8px;border:1px solid var(--line);display:block}
+.ph[aria-pressed="true"]{color:var(--accent)} .ph[aria-pressed="true"] img{outline:2px solid var(--accent);outline-offset:1px}
+.addph{flex:none;display:flex;flex-direction:column;gap:6px;justify-content:center}
+.sim{display:grid;grid-template-columns:minmax(0,1fr) 370px;gap:16px;align-items:start}
+.stage{position:sticky;top:72px;z-index:5;background:var(--stage);border:1px solid var(--line);border-radius:var(--r);overflow:hidden;height:min(74vh,780px);touch-action:none;user-select:none;-webkit-user-select:none;cursor:crosshair}
+.stage.pan{cursor:grab}
+.world{position:absolute;left:0;top:0;transform-origin:0 0;--inv:1}
+.world img,.world canvas{position:absolute;left:0;top:0;display:block;max-width:none;pointer-events:none}
+.anchor{position:absolute;width:28px;height:28px;margin:-14px 0 0 -14px;transform:scale(var(--inv));border-radius:50%;border:2px dashed #C9B5FF;background:rgba(90,53,176,.25);display:grid;place-items:center;color:#fff;font-size:12px;font-weight:700;cursor:move;touch-action:none;text-shadow:0 1px 2px #000}
+.anchor::after{content:"";position:absolute;width:4px;height:4px;border-radius:50%;background:#fff;box-shadow:0 0 0 1px #000}
+.anchor i{position:absolute;top:-16px;font-style:normal;background:#5A35B0;border-radius:8px;padding:0 5px;line-height:15px}
+.splitline{position:absolute;top:0;bottom:0;width:2px;background:#fff;box-shadow:0 0 0 1px rgba(0,0,0,.4);pointer-events:none;transform:scaleX(var(--inv))}
+.ring{position:absolute;border:1.5px solid #fff;box-shadow:0 0 0 1px rgba(0,0,0,.5);border-radius:50%;pointer-events:none;transform:translate(-50%,-50%);display:none}
+.hint{position:absolute;left:10px;right:10px;top:10px;background:rgba(106,63,207,.95);color:#fff;padding:9px 12px;border-radius:10px;font-weight:600;font-size:14px;pointer-events:none;text-align:center}
+.stage-ui{position:absolute;left:8px;right:8px;bottom:8px;display:flex;gap:8px;justify-content:space-between;align-items:flex-end;flex-wrap:wrap;pointer-events:none}
+.stage-ui>*{pointer-events:auto}
+.seg{display:inline-flex;background:rgba(255,255,255,.94);border:1px solid var(--line);box-shadow:var(--shadow);border-radius:10px;padding:3px;gap:2px}
+.seg button{border:0;background:none;color:var(--muted);padding:7px 11px;border-radius:8px;cursor:pointer;font-weight:600;font-size:13px;min-height:34px}
+.seg button[aria-pressed="true"]{background:var(--accent);color:var(--accent-ink)}
+.splitrange{position:absolute;left:10%;right:10%;bottom:58px;pointer-events:auto}
+.splitrange input{width:100%}
+.tag{position:absolute;top:10px;padding:3px 9px;border-radius:6px;background:rgba(255,255,255,.94);border:1px solid var(--line);color:var(--accent);font-size:12px;font-weight:700;pointer-events:none}
+.panel{display:flex;flex-direction:column;gap:12px}
+.panel .card{padding:14px}
+.mods{display:flex;flex-wrap:wrap;gap:6px}
+.modbtn{border:1px solid var(--line);background:var(--surface);border-radius:999px;padding:6px 11px;cursor:pointer;font-size:13px;font-weight:600;min-height:34px}
+.modbtn[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.modbtn[aria-pressed="true"] .muted{color:inherit;opacity:.85}
+.modbtn.on::before{content:"";display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--good);margin-right:6px}
+.sl{display:grid;grid-template-columns:1fr auto;gap:2px 8px;align-items:center}
+.sl label{font-weight:600;font-size:14px}
+.sl output{font-size:13px;color:var(--muted)}
+.sl input[type=range]{grid-column:1/-1;width:100%;accent-color:var(--accent);height:28px}
+.sl .ends{grid-column:1/-1;display:flex;justify-content:space-between;font-size:11px;color:var(--muted);margin-top:-4px}
+.steps{margin:0;padding:0;list-style:none;display:flex;flex-direction:column;gap:4px;font-size:13px}
+.steps li{display:flex;gap:8px;align-items:center}
+.steps li b{width:20px;height:20px;border-radius:50%;border:1.5px dashed var(--accent);display:grid;place-items:center;font-size:11px;color:var(--accent);flex:none}
+.steps li.done{color:var(--muted)} .steps li.now{font-weight:700}
+.tools{display:grid;grid-template-columns:repeat(4,1fr);gap:6px}
+.tool{border:1px solid var(--line);background:var(--surface);border-radius:10px;padding:7px 4px;cursor:pointer;font-size:12px;font-weight:600;display:flex;flex-direction:column;align-items:center;gap:3px;min-height:54px;line-height:1.15;text-align:center}
+.tool svg{width:20px;height:20px}
+.tool[aria-pressed="true"]{background:var(--accent-soft);border-color:var(--accent);color:var(--accent)}
+
+/* plan */
+.tbl{width:100%;border-collapse:collapse}
+.tbl th{font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);text-align:left;padding:6px 6px;border-bottom:1px solid var(--line);white-space:nowrap}
+.tbl td{padding:6px;border-bottom:1px solid var(--line);vertical-align:top}
+.tbl .in{min-height:36px;padding:6px 8px}
+.tbl .n{width:74px} .tbl .p{width:140px}
+.scroll-x{overflow-x:auto}
+.totals{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:10px}
+.totals .card b{font-family:var(--display);font-weight:400;font-size:22px;display:block}
+.totals .card.hl{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)} .totals .card.hl .lbl{color:inherit;opacity:.8}
+
+.toast{pointer-events:none;position:fixed;left:50%;bottom:22px;transform:translateX(-50%);background:var(--accent);color:#fff;padding:10px 16px;border-radius:10px;font-weight:600;z-index:60;max-width:92vw;box-shadow:var(--shadow)}
+.modal{position:fixed;inset:0;background:rgba(15,12,22,.55);display:grid;place-items:center;z-index:50;padding:16px}
+.modal .card{max-width:440px;width:100%;display:flex;flex-direction:column;gap:14px;box-shadow:var(--shadow)}
+.modal video{width:100%;border-radius:10px;background:#000}
+.note{background:var(--accent-soft);border-radius:10px;padding:10px 12px;font-size:13px}
+@media (max-width:900px){
+  .sim{grid-template-columns:1fr}
+  .stage{height:46vh;top:6px}
+  .splitrange{bottom:112px}
+  .bar{position:static}
+  h1{font-size:23px}
+  .pitem{grid-template-columns:48px minmax(0,1fr)} .pitem .right{grid-column:2;align-items:flex-start;text-align:left;flex-direction:row;flex-wrap:wrap}
+  .thumb{width:48px;height:48px}
+}
+@media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+</style>
+</head>
+<body>
+<header class="bar">
+  <div class="brand">
+    <div class="mono" aria-hidden="true">YH</div>
+    <div class="grow"><b id="brandName">Simulador de resultados</b><span id="brandSub">Dra. Yelitza Hernández</span></div>
+  </div>
+  <nav class="nav" aria-label="Secciones">
+    <button type="button" data-act="nav" data-v="list" id="navList">Pacientes</button>
+    <button type="button" data-act="nav" data-v="settings" id="navSet">Ajustes</button>
+  </nav>
+  <span class="chip" id="saveChip">Iniciando…</span>
+</header>
+<main id="app"></main>
+<input type="file" id="fileCam" accept="image/*" capture="environment" class="hide" aria-label="Tomar foto">
+<input type="file" id="fileLib" accept="image/*" class="hide" aria-label="Elegir foto">
+<input type="file" id="fileBackup" accept=".json,application/json" class="hide" aria-label="Importar respaldo">
+<div id="overlay"></div>
+
+<script>
+"use strict";
+/* ============ utilidades ============ */
+const $=(s,r=document)=>r.querySelector(s), $$=(s,r=document)=>[...r.querySelectorAll(s)];
+const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const uid=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,7);
+const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
+const V={sub:(a,b)=>[a[0]-b[0],a[1]-b[1]],add:(a,b)=>[a[0]+b[0],a[1]+b[1]],mul:(a,k)=>[a[0]*k,a[1]*k],len:a=>Math.hypot(a[0],a[1]),
+  norm:a=>{const l=Math.hypot(a[0],a[1])||1;return[a[0]/l,a[1]/l]},mid:(a,b)=>[(a[0]+b[0])/2,(a[1]+b[1])/2],ang:a=>Math.atan2(a[1],a[0]),
+  up:ax=>{let p=[ax[1],-ax[0]];if(p[1]>0)p=[-p[0],-p[1]];return p}};
+function toast(msg,ms=2800){let t=$('.toast');if(t)t.remove();t=document.createElement('div');t.className='toast';t.setAttribute('role','status');t.textContent=msg;document.body.appendChild(t);setTimeout(()=>t.remove(),ms)}
+function confirmBox(title,body,okLabel='Eliminar'){return new Promise(res=>{const o=$('#overlay');o.innerHTML=`<div class="modal" role="dialog" aria-modal="true"><div class="card"><h2>${esc(title)}</h2><div class="muted">${esc(body)}</div><div class="row" style="justify-content:flex-end"><button class="btn" id="cbNo" type="button">Cancelar</button><button class="btn primary" id="cbYes" type="button">${esc(okLabel)}</button></div></div></div>`;$('#cbNo').onclick=()=>{o.innerHTML='';res(false)};$('#cbYes').onclick=()=>{o.innerHTML='';res(true)};$('#cbYes').focus()})}
+const fmtDate=d=>{if(!d)return'';const[y,m,dd]=d.split('-');return`${dd}/${m}/${y}`};
+const today=()=>{const d=new Date();return`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`};
+function age(b){if(!b)return'';const d=new Date(b+'T00:00:00'),n=new Date();let a=n.getFullYear()-d.getFullYear();if(n<new Date(n.getFullYear(),d.getMonth(),d.getDate()))a--;return a>=0&&a<130?a:''}
+function money(v){const c=S.settings.currency||'COP';try{return new Intl.NumberFormat('es-CO',{style:'currency',currency:c,maximumFractionDigits:c==='COP'?0:2}).format(v||0)}catch(e){return'$ '+Math.round(v||0).toLocaleString('es-CO')}}
+const hrs=(a,b)=>{const f=n=>String(+(+n).toFixed(2)).replace('.',',');return a===b?`${f(a)} h`:`${f(a)} a ${f(b)} h`};
+function loadImg(src){return new Promise((res,rej)=>{const i=new Image();i.onload=()=>res(i);i.onerror=()=>rej(new Error('imagen'));i.src=src})}
+function b64FromBuf(buf){const u=new Uint8Array(buf);let s='';for(let i=0;i<u.length;i+=0x8000)s+=String.fromCharCode.apply(null,u.subarray(i,i+0x8000));return btoa(s)}
+function bufFromB64(b){const s=atob(b),u=new Uint8Array(s.length);for(let i=0;i<s.length;i++)u[i]=s.charCodeAt(i);return u.buffer}
+
+/* ============ almacenamiento (en este dispositivo) ============ */
+const Store=(()=>{
+  let db=null;const mem={kv:new Map(),patients:new Map(),photos:new Map()};
+  function open(){return new Promise(res=>{let done=false;const fin=v=>{if(!done){done=true;res(v)}};
+    try{const r=indexedDB.open('yh-simulador',1);
+      r.onupgradeneeded=()=>{const d=r.result;d.createObjectStore('kv');d.createObjectStore('patients',{keyPath:'id'});d.createObjectStore('photos',{keyPath:'id'}).createIndex('pid','patientId')};
+      r.onsuccess=()=>{db=r.result;fin(true)};r.onerror=()=>fin(false);r.onblocked=()=>fin(false)}catch(e){fin(false)}
+    setTimeout(()=>fin(!!db),3500)})}
+  function run(store,mode,fn){return new Promise((res,rej)=>{try{const t=db.transaction(store,mode);const rq=fn(t.objectStore(store));t.oncomplete=()=>res(rq?rq.result:undefined);t.onerror=()=>rej(t.error);t.onabort=()=>rej(t.error||new Error('abort'))}catch(e){rej(e)}})}
+  return{open,persistent:()=>!!db,
+    get:(s,k)=>db?run(s,'readonly',o=>o.get(k)):Promise.resolve(mem[s].get(k)),
+    put:(s,v,k)=>db?run(s,'readwrite',o=>k!==undefined?o.put(v,k):o.put(v)):Promise.resolve(void mem[s].set(k!==undefined?k:v.id,v)),
+    del:(s,k)=>db?run(s,'readwrite',o=>o.delete(k)):Promise.resolve(void mem[s].delete(k)),
+    all:s=>db?run(s,'readonly',o=>o.getAll()):Promise.resolve([...mem[s].values()]),
+    photosOf:pid=>db?run('photos','readonly',o=>o.index('pid').getAll(pid)):Promise.resolve([...mem.photos.values()].filter(p=>p.patientId===pid)),
+    clear:s=>db?run(s,'readwrite',o=>o.clear()):Promise.resolve(void mem[s].clear())}
+})();
+
+/* ============ catálogo y módulos de simulación ============ */
+const C=(id,name,area,minH,maxH,ref)=>({id,name,area,minH,maxH,price:0,...(ref?{ref:true}:{})});
+const AREAS=['Rostro','Mamas','Cuerpo','No quirúrgico','Otro'];
+const DEFAULT_CATALOG=[
+  C('rino','Rinoplastia','Rostro',3,4),C('blefaro','Blefaroplastia','Rostro',1,2),C('lifting','Lifting facial','Rostro',4,4),C('oto','Otoplastia','Rostro',1,2),
+  C('cejas','Lifting de cejas','Rostro',1,2,1),C('cuello','Lifting de cuello','Rostro',2,3,1),C('mento','Mentoplastia','Rostro',1,2,1),C('bichec','Bichectomía','Rostro',.5,1,1),C('papada','Liposucción de papada','Rostro',1,1.5,1),C('lipLift','Lip lift','Rostro',1,1,1),
+  C('mamoA','Mamoplastia de aumento','Mamas',2,3),C('mamoR','Mamoplastia de reducción','Mamas',2,3),C('pexia','Mastopexia (levantamiento de mamas)','Mamas',2,3,1),C('pexiaImp','Mastopexia con implantes','Mamas',3,4,1),C('gineco','Ginecomastia','Mamas',1,2,1),
+  C('abdomino','Abdominoplastia','Cuerpo',2,2),C('lipo','Lipoescultura','Cuerpo',4,5),C('liposuc','Liposucción por zonas','Cuerpo',1,3,1),C('miniAbd','Miniabdominoplastia','Cuerpo',1,2,1),C('gluteos','Aumento de glúteos','Cuerpo',2,4,1),C('braquio','Braquioplastia (brazos)','Cuerpo',2,3,1),C('muslos','Lifting de muslos','Cuerpo',2,3,1),C('labio','Labioplastia','Cuerpo',1,2,1),
+  C('haLabios','Ácido hialurónico en labios','No quirúrgico',0,0),C('haSurcos','Ácido hialurónico en surcos nasogenianos','No quirúrgico',0,0),C('haOjeras','Ácido hialurónico en ojeras','No quirúrgico',0,0),C('haPomulos','Ácido hialurónico en pómulos','No quirúrgico',0,0),C('haMenton','Ácido hialurónico en mentón y línea mandibular','No quirúrgico',0,0),C('rinomod','Rinomodelación','No quirúrgico',0,0),C('toxina','Toxina botulínica','No quirúrgico',0,0),C('bioest','Bioestimuladores de colágeno','No quirúrgico',0,0),C('hilos','Hilos tensores','No quirúrgico',0,0)];
+const DEFAULT_SETTINGS={tool:'Simulador de resultados',doctor:'Dra. Yelitza Hernández',clinic:'SKIND Aesthetic Center',city:'Barranquilla, Colombia',contact:'',currency:'COP',validity:30,catalogV:2,
+  legal:'Las imágenes de simulación son una referencia visual orientativa generada por software. No constituyen una promesa ni una garantía del resultado quirúrgico, que depende de la anatomía, la cicatrización y la evolución de cada paciente. Los valores y tiempos son estimados y pueden ajustarse tras la valoración médica.',
+  catalog:DEFAULT_CATALOG};
+const STATES=['Valoración','Propuesta entregada','Programada','Realizada','Descartada'];
+const STATE_CLS={'Programada':'s-prog','Realizada':'s-real','Descartada':'s-desc'};
+const LABELS=['Rostro de frente','Rostro de perfil','Rostro tres cuartos','Mamas de frente','Mamas de perfil','Cuerpo de frente','Cuerpo de perfil','Espalda y glúteos','Brazos','Piernas','Otra'];
+const JTYPES=['Consulta de valoración','Llamada o mensaje','Entrega de propuesta','Preoperatorio','Cirugía','Control posoperatorio','Nota'];
+const sl=(k,label,lo,hi,min=-100,max=100,def=0)=>({k,label,lo,hi,min,max,def});
+const MODULES={
+ rinoFrontal:{name:'Rinoplastia · frente',group:'Rostro',tip:'Foto de frente, cabeza recta.',
+  anchors:[{k:'raiz',label:'Raíz nasal, entre los ojos'},{k:'punta',label:'Punta nasal'},{k:'alaI',label:'Ala nasal, lado izquierdo de la foto'},{k:'alaD',label:'Ala nasal, lado derecho de la foto'}],
+  sliders:[sl('dorso','Ancho del dorso','Afinar','Ensanchar'),sl('base','Base alar','Estrechar','Ampliar'),sl('punta','Tamaño de la punta','Reducir','Aumentar'),sl('elev','Posición de la punta','Descender','Elevar'),sl('global','Tamaño global de la nariz','Reducir','Aumentar')],
+  apply(A,s,E){const w=V.len(V.sub(A.alaD,A.alaI)),u0=V.sub(A.punta,A.raiz),L=V.len(u0),u=V.norm(u0),ang=V.ang(u),c=V.mid(A.alaI,A.alaD);
+   if(s('dorso'))E.pinch(V.add(A.raiz,V.mul(u,.12*L)),V.add(A.raiz,V.mul(u,.78*L)),.5*w,-s('dorso')*.4);
+   if(s('base'))for(const a of[A.alaI,A.alaD])E.shift(a,.36*w,.36*w,0,V.mul(V.norm(V.sub(c,a)),-s('base')*.14*w));
+   if(s('punta'))E.scale(A.punta,.34*w,.4*w,ang,1+s('punta')*.25);
+   if(s('elev'))E.shift(A.punta,.5*w,.55*w,ang,V.mul(u,-s('elev')*.08*L));
+   if(s('global'))E.scale(V.add(A.raiz,V.mul(u,.6*L)),.7*L,.8*w,ang,1+s('global')*.15)}},
+ rinoPerfil:{name:'Rinoplastia · perfil',group:'Rostro',tip:'Foto de perfil con fondo liso.',
+  anchors:[{k:'raiz',label:'Raíz nasal (nasion)'},{k:'dorso',label:'Punto más alto del dorso o giba'},{k:'punta',label:'Punta nasal'},{k:'subnasal',label:'Unión de la columela con el labio'}],
+  sliders:[sl('giba','Giba dorsal','Reducir','Aumentar'),sl('proy','Proyección de la punta','Menos','Más'),sl('rot','Rotación de la punta','Descender','Elevar'),sl('punta','Tamaño de la punta','Reducir','Aumentar'),sl('radix','Raíz nasal','Reducir','Aumentar')],
+  apply(A,s,E){const u0=V.sub(A.punta,A.raiz),L=V.len(u0),u=V.norm(u0),ang=V.ang(u);let n=[u[1],-u[0]];const sn=V.sub(A.subnasal,A.raiz);if(n[0]*sn[0]+n[1]*sn[1]>0)n=V.mul(n,-1);
+   if(s('giba'))E.shift(A.dorso,.36*L,.2*L,ang,V.mul(n,s('giba')*.09*L));
+   if(s('proy'))E.shift(A.punta,.3*L,.3*L,0,V.mul(n,s('proy')*.1*L));
+   if(s('rot'))E.shift(A.punta,.3*L,.3*L,0,V.mul(u,-s('rot')*.08*L));
+   if(s('punta'))E.scale(A.punta,.24*L,.24*L,0,1+s('punta')*.25);
+   if(s('radix'))E.shift(A.raiz,.25*L,.25*L,0,V.mul(n,s('radix')*.06*L))}},
+ parpados:{name:'Ojos, cejas y frente',group:'Rostro',tip:'Foto de frente, ojos abiertos y mirada al lente.',
+  anchors:[{k:'ojoI',label:'Pupila, lado izquierdo de la foto'},{k:'ojoD',label:'Pupila, lado derecho de la foto'}],
+  sliders:[sl('sup','Párpado superior, exceso de piel','Sin cambio','Retirar',0,100),sl('inf','Párpado inferior, bolsas y ojeras','Sin cambio','Atenuar',0,100),sl('ceja','Altura de la ceja','Descender','Elevar'),sl('cola','Cola de la ceja','Descender','Elevar'),sl('patas','Líneas periorbitarias','Sin cambio','Atenuar',0,100),sl('frente','Líneas de la frente','Sin cambio','Atenuar',0,100),sl('entrecejo','Entrecejo','Sin cambio','Atenuar',0,100)],
+  apply(A,s,E){const ax=V.norm(V.sub(A.ojoD,A.ojoI)),d=V.len(V.sub(A.ojoD,A.ojoI)),up=V.up(ax),ang=V.ang(ax),mm=V.mid(A.ojoI,A.ojoD);
+   if(s('frente'))E.mask('S',V.add(mm,V.mul(up,.8*d)),d,.38*d,ang,s('frente')*.9);
+   if(s('entrecejo')){const c=V.add(mm,V.mul(up,.3*d));E.mask('S',c,.24*d,.26*d,ang,s('entrecejo')*.9);E.mask('L',c,.24*d,.26*d,ang,s('entrecejo')*.7)}
+   for(const[e,lat]of[[A.ojoI,V.mul(ax,-1)],[A.ojoD,ax]]){
+    if(s('sup'))E.shift(V.add(e,V.mul(up,.2*d)),.36*d,.13*d,ang,V.mul(up,s('sup')*.05*d));
+    if(s('inf')){const c=V.add(e,V.mul(up,-.2*d));E.mask('L',c,.32*d,.13*d,ang,s('inf')*.9);E.mask('S',c,.32*d,.13*d,ang,s('inf')*.6)}
+    if(s('ceja'))E.shift(V.add(e,V.mul(up,.42*d)),.5*d,.18*d,ang,V.mul(up,s('ceja')*.07*d));
+    if(s('cola'))E.shift(V.add(V.add(e,V.mul(up,.4*d)),V.mul(lat,.3*d)),.32*d,.2*d,ang,V.mul(V.add(V.mul(up,.9),V.mul(lat,.25)),s('cola')*.07*d));
+    if(s('patas'))E.mask('S',V.add(e,V.mul(lat,.42*d)),.16*d,.24*d,ang,s('patas')*.9)}}},
+ lifting:{name:'Lifting y surcos',group:'Rostro',tip:'Foto de frente, expresión relajada.',
+  anchors:[{k:'sIa',label:'Inicio del surco nasogeniano junto al ala nasal, lado izquierdo'},{k:'sIb',label:'Final del surco junto a la comisura, lado izquierdo'},{k:'sDa',label:'Inicio del surco junto al ala nasal, lado derecho'},{k:'sDb',label:'Final del surco junto a la comisura, lado derecho'},{k:'menton',label:'Mentón, punto más bajo'}],
+  sliders:[sl('surco','Surco nasogeniano','Sin cambio','Atenuar',0,100),sl('mario','Líneas de marioneta','Sin cambio','Atenuar',0,100),sl('mejilla','Tercio medio y mejilla','Sin cambio','Elevar',0,100),sl('mand','Línea mandibular','Sin cambio','Definir',0,100),sl('cuello','Cuello y papada','Sin cambio','Tensar',0,100)],
+  apply(A,s,E){const ax=V.norm(V.sub(A.sDa,A.sIa)),up=V.up(ax),F=V.len(V.sub(A.menton,V.mid(A.sIa,A.sDa)));
+   for(const[a,b,lat]of[[A.sIa,A.sIb,V.mul(ax,-1)],[A.sDa,A.sDb,ax]]){const Lf=V.len(V.sub(b,a)),dir=V.norm(V.sub(b,a)),m=V.mid(a,b);
+    if(s('surco')){const e=V.add(b,V.mul(dir,.15*Lf));E.maskCap('L',a,e,.24*Lf,s('surco'));E.maskCap('S',a,e,.24*Lf,s('surco')*.7)}
+    if(s('mario')){const e=V.add(V.add(b,V.mul(up,-.6*Lf)),V.mul(lat,.05*Lf));E.maskCap('L',b,e,.17*Lf,s('mario'));E.maskCap('S',b,e,.17*Lf,s('mario')*.6)}
+    if(s('mejilla'))E.shift(V.add(V.add(m,V.mul(lat,.6*Lf)),V.mul(up,.1*Lf)),.62*Lf,.62*Lf,0,V.mul(V.add(V.mul(up,.8),V.mul(lat,.4)),s('mejilla')*.1*Lf));
+    if(s('mand'))E.shift(V.add(V.add(b,V.mul(up,-.75*Lf)),V.mul(lat,.4*Lf)),.55*Lf,.45*Lf,0,V.mul(V.add(V.mul(up,.8),V.mul(lat,.5)),s('mand')*.1*Lf))}
+   if(s('cuello'))E.shift(V.add(A.menton,V.mul(up,-.32*F)),.6*F,.26*F,V.ang(ax),V.mul(up,s('cuello')*.08*F))}},
+ otoplastia:{name:'Otoplastia',group:'Rostro',tip:'Foto de frente con el cabello recogido.',
+  anchors:[{k:'orI',label:'Borde externo de la oreja, lado izquierdo de la foto'},{k:'orD',label:'Borde externo de la oreja, lado derecho de la foto'}],
+  sliders:[sl('proy','Proyección de las orejas','Acercar','Separar'),sl('tam','Tamaño','Reducir','Aumentar')],
+  apply(A,s,E){const ax=V.norm(V.sub(A.orD,A.orI)),d=V.len(V.sub(A.orD,A.orI)),ang=V.ang(ax),c=V.mid(A.orI,A.orD);
+   for(const e of[A.orI,A.orD]){const tw=V.norm(V.sub(c,e));
+    if(s('proy'))E.shift(e,.11*d,.24*d,ang,V.mul(tw,-s('proy')*.04*d));
+    if(s('tam'))E.scale(e,.11*d,.24*d,ang,1+s('tam')*.2)}}},
+ mamas:{name:'Mamas',group:'Cuerpo',tip:'Foto de frente, brazos a los lados.',
+  anchors:[{k:'mI',label:'Centro de la mama, lado izquierdo de la foto'},{k:'mD',label:'Centro de la mama, lado derecho de la foto'}],
+  sliders:[sl('vol','Volumen','Reducir','Aumentar'),sl('elev','Posición','Descender','Elevar'),sl('escote','Separación','Separar','Juntar'),sl('polo','Polo superior','Menos lleno','Más lleno'),sl('zona','Tamaño del área afectada','Pequeña','Amplia',35,85,55)],
+  apply(A,s,E){const ax=V.norm(V.sub(A.mD,A.mI)),d=V.len(V.sub(A.mD,A.mI)),up=V.up(ax),ang=V.ang(ax),c=V.mid(A.mI,A.mD),r=d*s('zona');
+   for(const e of[A.mI,A.mD]){const tw=V.norm(V.sub(c,e));
+    if(s('vol'))E.scale(e,r,r,0,1+s('vol')*.3);
+    if(s('elev'))E.shift(e,1.05*r,1.05*r,0,V.mul(up,s('elev')*.25*r));
+    if(s('escote'))E.shift(e,r,r,0,V.mul(tw,s('escote')*.15*r));
+    if(s('polo'))E.scale(V.add(e,V.mul(up,.45*r)),.75*r,.5*r,ang,1+s('polo')*.2)}}},
+ contorno:{name:'Abdomen y cintura · frente',group:'Cuerpo',tip:'Abdominoplastia, liposucción y lipoescultura. Foto de frente o de espalda.',
+  anchors:[{k:'cI',label:'Cintura, punto más estrecho del lado izquierdo de la foto'},{k:'cD',label:'Cintura, punto más estrecho del lado derecho de la foto'}],
+  sliders:[sl('cintura','Cintura','Reducir','Aumentar'),sl('flanco','Flancos y espalda alta','Reducir','Aumentar'),sl('cadera','Caderas','Reducir','Aumentar'),sl('inferior','Abdomen inferior, colgajo','Sin cambio','Tensar',0,100),sl('piel','Estrías y flacidez','Sin cambio','Atenuar',0,100)],
+  apply(A,s,E){const ax=V.norm(V.sub(A.cD,A.cI)),Wd=V.len(V.sub(A.cD,A.cI)),up=V.up(ax),ang=V.ang(ax),c=V.mid(A.cI,A.cD);
+   for(const e of[A.cI,A.cD]){const tw=V.norm(V.sub(c,e));
+    if(s('cintura'))E.shift(e,.3*Wd,.55*Wd,ang,V.mul(tw,-s('cintura')*.1*Wd));
+    if(s('flanco'))E.shift(V.add(e,V.mul(up,.6*Wd)),.3*Wd,.45*Wd,ang,V.mul(tw,-s('flanco')*.08*Wd));
+    if(s('cadera'))E.shift(V.add(e,V.mul(up,-.75*Wd)),.3*Wd,.45*Wd,ang,V.mul(tw,-s('cadera')*.08*Wd))}
+   if(s('inferior'))E.shift(V.add(c,V.mul(up,-.55*Wd)),.5*Wd,.35*Wd,ang,V.mul(up,s('inferior')*.12*Wd));
+   if(s('piel'))E.mask('S',V.add(c,V.mul(up,-.3*Wd)),.5*Wd,.65*Wd,ang,s('piel')*.95)}},
+ perfil:{name:'Abdomen y glúteo · perfil',group:'Cuerpo',tip:'Foto de perfil con fondo liso.',
+  anchors:[{k:'ab',label:'Punto más prominente del abdomen'},{k:'esp',label:'Espalda, a la misma altura'},{k:'glu',label:'Punto más prominente del glúteo'}],
+  sliders:[sl('abd','Abdomen','Aplanar','Aumentar'),sl('colgajo','Colgajo abdominal inferior','Sin cambio','Retirar',0,100),sl('glu','Glúteo','Reducir','Aumentar')],
+  apply(A,s,E){const back=V.norm(V.sub(A.esp,A.ab)),T=V.len(V.sub(A.esp,A.ab)),up=V.up(back),ang=V.ang(back);
+   if(s('abd'))E.shift(A.ab,.45*T,.8*T,ang,V.mul(back,-s('abd')*.18*T));
+   if(s('colgajo'))E.shift(V.add(A.ab,V.mul(up,-.7*T)),.45*T,.45*T,0,V.mul(V.add(V.mul(up,.7),V.mul(back,.5)),s('colgajo')*.15*T));
+   if(s('glu'))E.shift(A.glu,.4*T,.6*T,ang,V.mul(back,s('glu')*.15*T))}}
+};
+function brazoApply(A,s,E){const ab=V.sub(A.co,A.ax),L=V.len(ab)||1,u=V.norm(ab),t=clamp(((A.bj[0]-A.ax[0])*u[0]+(A.bj[1]-A.ax[1])*u[1])/L,0,1),cl=V.add(A.ax,V.mul(u,t*L)),dv=V.sub(cl,A.bj),h=Math.max(V.len(dv),.05*L);
+  if(s('flac'))E.shift(A.bj,.5*L,1.4*h,V.ang(u),V.mul(dv,s('flac')*.5));
+  if(s('piel'))E.mask('S',V.mid(cl,A.bj),.5*L,1.2*h,V.ang(u),s('piel')*.9)}
+const BRAZO=lado=>({name:'Brazo · lado '+lado,group:'Cuerpo',tip:'Brazo abierto en cruz, foto de frente o de espalda.',
+  anchors:[{k:'ax',label:'Axila, en el pliegue'},{k:'co',label:'Codo, cara interna'},{k:'bj',label:'Punto más colgante del borde inferior del brazo'}],
+  sliders:[sl('flac','Flacidez del brazo','Sin cambio','Reducir',0,100),sl('piel','Piel del brazo','Sin cambio','Atenuar',0,100)],apply:brazoApply});
+Object.assign(MODULES,{
+ facial:{name:'Contorno facial · frente',group:'Rostro',tip:'Pómulos, mejillas, mentón y mandíbula. Foto de frente.',
+  anchors:[{k:'pI',label:'Pómulo más prominente, lado izquierdo de la foto'},{k:'pD',label:'Pómulo más prominente, lado derecho de la foto'},{k:'aI',label:'Ángulo de la mandíbula, lado izquierdo'},{k:'aD',label:'Ángulo de la mandíbula, lado derecho'},{k:'menton',label:'Mentón, centro'}],
+  sliders:[sl('pomulo','Proyección de pómulos','Reducir','Aumentar'),sl('mejilla','Mejillas (bichectomía o relleno)','Afinar','Rellenar'),sl('angulo','Ángulo mandibular','Afinar','Marcar'),sl('menton','Tamaño del mentón','Reducir','Aumentar'),sl('mentonAlt','Altura del mentón','Acortar','Alargar')],
+  apply(A,s,E){const ax=V.norm(V.sub(A.pD,A.pI)),d=V.len(V.sub(A.pD,A.pI)),up=V.up(ax),ang=V.ang(ax),c=V.mid(A.pI,A.pD);
+   for(const[p,a]of[[A.pI,A.aI],[A.pD,A.aD]]){const out=V.norm(V.sub(p,c));
+    if(s('pomulo'))E.scale(p,.17*d,.17*d,0,1+s('pomulo')*.22);
+    if(s('mejilla'))E.shift(V.mid(p,a),.16*d,.24*d,ang,V.mul(out,s('mejilla')*.045*d));
+    if(s('angulo'))E.shift(a,.2*d,.2*d,0,V.mul(out,s('angulo')*.05*d))}
+   if(s('menton'))E.scale(A.menton,.2*d,.2*d,0,1+s('menton')*.2);
+   if(s('mentonAlt'))E.shift(A.menton,.3*d,.22*d,ang,V.mul(up,-s('mentonAlt')*.05*d))}},
+ labios:{name:'Labios',group:'Rostro',tip:'Foto de frente, boca cerrada y relajada.',
+  anchors:[{k:'cI',label:'Comisura, lado izquierdo de la foto'},{k:'cD',label:'Comisura, lado derecho de la foto'},{k:'sup',label:'Borde del labio superior, en el centro'},{k:'inf',label:'Borde inferior del labio inferior, en el centro'}],
+  sliders:[sl('sup','Volumen del labio superior','Reducir','Aumentar'),sl('inf','Volumen del labio inferior','Reducir','Aumentar'),sl('lift','Lip lift','Sin cambio','Acortar',0,100),sl('comis','Comisuras','Descender','Elevar'),sl('barras','Líneas peribucales','Sin cambio','Atenuar',0,100)],
+  apply(A,s,E){const ax=V.norm(V.sub(A.cD,A.cI)),w=V.len(V.sub(A.cD,A.cI)),up=V.up(ax),ang=V.ang(ax),c=V.mid(A.cI,A.cD),hU=Math.max(V.len(V.sub(A.sup,c)),.05*w),hL=Math.max(V.len(V.sub(A.inf,c)),.05*w);
+   if(s('sup'))E.shift(A.sup,.5*w,.95*hU,ang,V.mul(up,s('sup')*.35*hU));
+   if(s('inf'))E.shift(A.inf,.5*w,.95*hL,ang,V.mul(up,-s('inf')*.35*hL));
+   if(s('lift'))E.shift(V.add(A.sup,V.mul(up,1.1*hU)),.5*w,1.9*hU,ang,V.mul(up,s('lift')*.3*hU));
+   if(s('comis'))for(const e of[A.cI,A.cD])E.shift(e,.16*w,.16*w,0,V.mul(up,s('comis')*.04*w));
+   if(s('barras'))E.mask('S',V.add(A.sup,V.mul(up,1.2*hU)),.55*w,1.3*hU,ang,s('barras')*.9)}},
+ perfilFacial:{name:'Mentón y cuello · perfil',group:'Rostro',tip:'Foto de perfil, cabeza recta y fondo liso.',
+  anchors:[{k:'menton',label:'Punto más prominente del mentón'},{k:'papada',label:'Punto más bajo de la papada'},{k:'cuello',label:'Ángulo entre la papada y el cuello'}],
+  sliders:[sl('proy','Proyección del mentón','Reducir','Aumentar'),sl('alt','Altura del mentón','Acortar','Alargar'),sl('papada','Papada','Sin cambio','Reducir',0,100),sl('cervical','Ángulo del cuello','Sin cambio','Definir',0,100)],
+  apply(A,s,E){const D=V.len(V.sub(A.menton,A.cuello))||1,fwd=[A.menton[0]>=A.cuello[0]?1:-1,0],up=[0,-1];
+   if(s('proy'))E.shift(A.menton,.45*D,.45*D,0,V.mul(fwd,s('proy')*.12*D));
+   if(s('alt'))E.shift(A.menton,.45*D,.45*D,0,V.mul(up,-s('alt')*.1*D));
+   if(s('papada'))E.shift(A.papada,.5*D,.4*D,0,V.mul(V.add(V.mul(up,.9),V.mul(fwd,-.2)),s('papada')*.16*D));
+   if(s('cervical'))E.shift(A.cuello,.4*D,.4*D,0,V.mul(V.add(V.mul(up,.7),V.mul(fwd,-.6)),s('cervical')*.1*D))}},
+ gluteos:{name:'Glúteos · espalda',group:'Cuerpo',tip:'Foto de espalda, pies separados al ancho de la cadera.',
+  anchors:[{k:'gI',label:'Centro del glúteo, lado izquierdo de la foto'},{k:'gD',label:'Centro del glúteo, lado derecho de la foto'}],
+  sliders:[sl('vol','Volumen','Reducir','Aumentar'),sl('elev','Posición','Descender','Elevar'),sl('polo','Polo superior','Menos lleno','Más lleno'),sl('lateral','Depresión lateral de cadera','Marcar','Rellenar'),sl('zona','Tamaño del área afectada','Pequeña','Amplia',35,85,55)],
+  apply(A,s,E){const ax=V.norm(V.sub(A.gD,A.gI)),d=V.len(V.sub(A.gD,A.gI)),up=V.up(ax),ang=V.ang(ax),c=V.mid(A.gI,A.gD),r=d*s('zona');
+   for(const e of[A.gI,A.gD]){const lat=V.norm(V.sub(e,c));
+    if(s('vol'))E.scale(e,r,r,0,1+s('vol')*.25);
+    if(s('elev'))E.shift(e,1.05*r,1.05*r,0,V.mul(up,s('elev')*.2*r));
+    if(s('polo'))E.scale(V.add(e,V.mul(up,.45*r)),.75*r,.5*r,ang,1+s('polo')*.2);
+    if(s('lateral'))E.shift(V.add(e,V.mul(lat,.85*r)),.45*r,.8*r,ang,V.mul(lat,s('lateral')*.12*r))}}},
+ muslos:{name:'Muslos',group:'Cuerpo',tip:'Foto de frente o de espalda, piernas ligeramente separadas.',
+  anchors:[{k:'eI',label:'Borde externo del muslo, lado izquierdo de la foto'},{k:'iI',label:'Borde interno del muslo, lado izquierdo'},{k:'iD',label:'Borde interno del muslo, lado derecho'},{k:'eD',label:'Borde externo del muslo, lado derecho de la foto'}],
+  sliders:[sl('ext','Cara externa (cartucheras)','Reducir','Aumentar'),sl('int','Cara interna','Reducir','Aumentar'),sl('piel','Celulitis y flacidez','Sin cambio','Atenuar',0,100)],
+  apply(A,s,E){for(const[e,i]of[[A.eI,A.iI],[A.eD,A.iD]]){const m=V.mid(e,i),wT=V.len(V.sub(i,e))||1,ang=V.ang(V.sub(i,e));
+    if(s('ext'))E.shift(e,.35*wT,1.1*wT,ang,V.mul(V.norm(V.sub(m,e)),-s('ext')*.1*wT));
+    if(s('int'))E.shift(i,.35*wT,1.1*wT,ang,V.mul(V.norm(V.sub(m,i)),-s('int')*.1*wT));
+    if(s('piel'))E.mask('S',m,.6*wT,1.2*wT,ang,s('piel')*.9)}}},
+ brazoI:BRAZO('izquierdo de la foto'),brazoD:BRAZO('derecho de la foto')
+});
+function modState(photo,mk){photo.mods=photo.mods||{};if(!photo.mods[mk])photo.mods[mk]={a:{},s:{}};return photo.mods[mk]}
+const modPlaced=(photo,mk)=>{const st=photo.mods&&photo.mods[mk];return!!st&&MODULES[mk].anchors.every(a=>st.a[a.k])};
+const modActive=(photo,mk)=>modPlaced(photo,mk)&&MODULES[mk].sliders.some(d=>d.k!=='zona'&&(photo.mods[mk].s[d.k]??d.def)!==d.def);
+
+/* ============ motor de deformación (WebGL) ============ */
+const Engine=(()=>{
+  const cv=document.createElement('canvas');cv.id='gl';
+  let gl=null,tex=[],bufPos,bufUV,bufIdx,aPos,aUV,nIdx=0;
+  let W=0,H=0,gw=0,gh=0,nv=0,B=null,P=null,uv=null,photo=null,src=null,bL=null,bS=null;
+  let mS,mL,pS,pL,uS,uL,ms=1,maskDirty=false,maskTouched=false,undo=[];
+  const VS='attribute vec2 aPos;attribute vec2 aUV;varying vec2 vUV;void main(){vUV=aUV;gl_Position=vec4(aPos,0.,1.);}';
+  const FS='precision mediump float;varying vec2 vUV;uniform sampler2D uImg,uBL,uBS,uMS,uML;void main(){vec3 o=texture2D(uImg,vUV).rgb;vec3 b=texture2D(uBL,vUV).rgb;vec3 bs=texture2D(uBS,vUV).rgb;float s=texture2D(uMS,vUV).a;float l=texture2D(uML,vUV).a;vec3 fs=b+(o-bs)*.7;vec3 c=mix(o,fs,s);c=mix(c,max(c,fs),l);gl_FragColor=vec4(c,1.);}';
+  function initGL(){
+    gl=cv.getContext('webgl',{alpha:false,antialias:false,premultipliedAlpha:false})||cv.getContext('experimental-webgl');
+    if(!gl)return false;
+    const mk=(t,s)=>{const sh=gl.createShader(t);gl.shaderSource(sh,s);gl.compileShader(sh);return sh};
+    const pr=gl.createProgram();gl.attachShader(pr,mk(gl.VERTEX_SHADER,VS));gl.attachShader(pr,mk(gl.FRAGMENT_SHADER,FS));gl.linkProgram(pr);gl.useProgram(pr);
+    aPos=gl.getAttribLocation(pr,'aPos');aUV=gl.getAttribLocation(pr,'aUV');
+    ['uImg','uBL','uBS','uMS','uML'].forEach((n,i)=>gl.uniform1i(gl.getUniformLocation(pr,n),i));
+    bufPos=gl.createBuffer();bufUV=gl.createBuffer();bufIdx=gl.createBuffer();
+    tex=[0,1,2,3,4].map(i=>{const t=gl.createTexture();gl.activeTexture(gl.TEXTURE0+i);gl.bindTexture(gl.TEXTURE_2D,t);
+      gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MIN_FILTER,gl.LINEAR);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MAG_FILTER,gl.LINEAR);
+      gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_S,gl.CLAMP_TO_EDGE);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_T,gl.CLAMP_TO_EDGE);return t});
+    return true}
+  cv.addEventListener('webglcontextlost',e=>e.preventDefault());
+  cv.addEventListener('webglcontextrestored',()=>{if(initGL()&&src){uploadStatic();maskDirty=true;render()}});
+  const upTex=(i,s)=>{gl.activeTexture(gl.TEXTURE0+i);gl.bindTexture(gl.TEXTURE_2D,tex[i]);gl.texImage2D(gl.TEXTURE_2D,0,gl.RGBA,gl.RGBA,gl.UNSIGNED_BYTE,s)};
+  function mkc(w,h){const c=document.createElement('canvas');c.width=Math.max(1,Math.round(w));c.height=Math.max(1,Math.round(h));return c}
+  function scaled(s,w,h){const c=mkc(w,h),x=c.getContext('2d');x.imageSmoothingEnabled=true;x.imageSmoothingQuality='high';x.drawImage(s,0,0,c.width,c.height);return c}
+  function blurOf(s,down,upTo){let c=s,f=1;while(f<down){c=scaled(c,c.width/2,c.height/2);f*=2}while(f>upTo){c=scaled(c,c.width*2,c.height*2);f/=2}return c}
+  function uploadStatic(){
+    const pos=new Float32Array(nv*2);for(let j=0;j<=gh;j++)for(let i=0;i<=gw;i++){const k=j*(gw+1)+i;pos[2*k]=i/gw*2-1;pos[2*k+1]=1-j/gh*2}
+    const idx=new Uint16Array(gw*gh*6);let q=0;for(let j=0;j<gh;j++)for(let i=0;i<gw;i++){const a=j*(gw+1)+i,b=a+1,c=a+gw+1,d=c+1;idx[q++]=a;idx[q++]=c;idx[q++]=b;idx[q++]=b;idx[q++]=c;idx[q++]=d}
+    nIdx=idx.length;gl.bindBuffer(gl.ARRAY_BUFFER,bufPos);gl.bufferData(gl.ARRAY_BUFFER,pos,gl.STATIC_DRAW);gl.enableVertexAttribArray(aPos);gl.vertexAttribPointer(aPos,2,gl.FLOAT,false,0,0);
+    gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER,bufIdx);gl.bufferData(gl.ELEMENT_ARRAY_BUFFER,idx,gl.STATIC_DRAW);
+    upTex(0,src);upTex(1,bL);upTex(2,bS)}
+  async function load(ph){
+    if(!gl&&!initGL())throw new Error('Este navegador no permite WebGL, necesario para la simulación.');
+    photo=ph;const img=await loadImg(ph.orig);W=img.naturalWidth;H=img.naturalHeight;cv.width=W;cv.height=H;cv.style.width=W+'px';cv.style.height=H+'px';
+    src=mkc(W,H);src.getContext('2d').drawImage(img,0,0);bL=blurOf(src,16,4);bS=blurOf(src,4,2);
+    const long=180;gw=Math.max(8,Math.round(W/Math.max(W,H)*long));gh=Math.max(8,Math.round(H/Math.max(W,H)*long));nv=(gw+1)*(gh+1);
+    B=new Float32Array(nv*2);P=new Float32Array(nv*2);uv=new Float32Array(nv*2);
+    if(ph.brush&&ph.gw===gw&&ph.gh===gh&&ph.brush.length===nv*2)B.set(ph.brush);
+    ms=Math.min(1,640/Math.max(W,H));const mw=W*ms,mh=H*ms;mS=mkc(mw,mh);mL=mkc(mw,mh);pS=mkc(mw,mh);pL=mkc(mw,mh);uS=mkc(mw,mh);uL=mkc(mw,mh);
+    maskTouched=false;
+    for(const[c,d]of[[mS,ph.maskS],[mL,ph.maskL]])if(d){try{const im=await loadImg(d);c.getContext('2d').drawImage(im,0,0,c.width,c.height);maskTouched=true}catch(e){}}
+    undo=[];uploadStatic();recompute();render()}
+  function eachIn(cx,cy,R,fn){const sx=W/gw,sy=H/gh,i0=Math.max(0,Math.floor((cx-R)/sx)),i1=Math.min(gw,Math.ceil((cx+R)/sx)),j0=Math.max(0,Math.floor((cy-R)/sy)),j1=Math.min(gh,Math.ceil((cy+R)/sy));
+    for(let j=j0;j<=j1;j++)for(let i=i0;i<=i1;i++)fn(j*(gw+1)+i,i*sx,j*sy)}
+  /* primitivas paramétricas: escriben el desplazamiento inverso en P */
+  const E={
+    shift(c,rx,ry,ang,v){const co=Math.cos(ang),si=Math.sin(ang);eachIn(c[0],c[1],Math.max(rx,ry),(k,x,y)=>{const dx=x-c[0],dy=y-c[1],qx=(dx*co+dy*si)/rx,qy=(-dx*si+dy*co)/ry,t=qx*qx+qy*qy;if(t>=1)return;const f=(1-t)*(1-t);P[2*k]-=v[0]*f;P[2*k+1]-=v[1]*f})},
+    scale(c,rx,ry,ang,s){const co=Math.cos(ang),si=Math.sin(ang);eachIn(c[0],c[1],Math.max(rx,ry),(k,x,y)=>{const dx=x-c[0],dy=y-c[1],qx=dx*co+dy*si,qy=-dx*si+dy*co,t=(qx/rx)*(qx/rx)+(qy/ry)*(qy/ry);if(t>=1)return;const f=(1-t)*(1-t),e=1/(1+(s-1)*f)-1;P[2*k]+=dx*e;P[2*k+1]+=dy*e})},
+    pinch(a,b,r,kk){const ab=V.sub(b,a),l2=ab[0]*ab[0]+ab[1]*ab[1]||1,c=V.mid(a,b),R=Math.sqrt(l2)/2+r;eachIn(c[0],c[1],R,(k,x,y)=>{let t=((x-a[0])*ab[0]+(y-a[1])*ab[1])/l2;t=clamp(t,0,1);const dx=x-(a[0]+ab[0]*t),dy=y-(a[1]+ab[1]*t),q=(dx*dx+dy*dy)/(r*r);if(q>=1)return;const f=(1-q)*(1-q);P[2*k]+=dx*kk*f;P[2*k+1]+=dy*kk*f})},
+    mask(kind,c,rx,ry,ang,a){const x=(kind==='S'?pS:pL).getContext('2d');x.save();x.translate(c[0]*ms,c[1]*ms);x.rotate(ang);x.scale(rx*ms,ry*ms);const g=x.createRadialGradient(0,0,0,0,0,1);a=clamp(a,0,1);g.addColorStop(0,`rgba(255,255,255,${a})`);g.addColorStop(.55,`rgba(255,255,255,${a*.8})`);g.addColorStop(1,'rgba(255,255,255,0)');x.fillStyle=g;x.beginPath();x.arc(0,0,1,0,7);x.fill();x.restore()},
+    maskCap(kind,a,b,r,st){const L=V.len(V.sub(b,a)),n=Math.max(2,Math.ceil(L/(r*.5)));for(let i=0;i<=n;i++){const p=V.add(a,V.mul(V.sub(b,a),i/n));E.mask(kind,p,r,r,0,st*.5)}}
+  };
+  function recompute(){
+    P.fill(0);for(const c of[pS,pL])c.getContext('2d').clearRect(0,0,c.width,c.height);
+    for(const mk in(photo.mods||{})){if(!MODULES[mk]||!modPlaced(photo,mk))continue;const st=photo.mods[mk],M=MODULES[mk];
+      const s=k=>{const d=M.sliders.find(d=>d.k===k);return(st.s[k]??d.def)/100};try{M.apply(st.a,s,E)}catch(e){console.error(e)}}
+    maskDirty=true}
+  function render(){
+    if(!gl||!photo)return;
+    if(maskDirty){for(const[u,m,p,i]of[[uS,mS,pS,3],[uL,mL,pL,4]]){const x=u.getContext('2d');x.clearRect(0,0,u.width,u.height);x.drawImage(m,0,0);x.drawImage(p,0,0);upTex(i,u)}maskDirty=false}
+    const sx=W/gw,sy=H/gh,g1=gw+1;for(let k=0;k<nv;k++){const i=k%g1,j=(k/g1)|0;uv[2*k]=(i*sx+B[2*k]+P[2*k])/W;uv[2*k+1]=(j*sy+B[2*k+1]+P[2*k+1])/H}
+    gl.viewport(0,0,W,H);gl.bindBuffer(gl.ARRAY_BUFFER,bufUV);gl.bufferData(gl.ARRAY_BUFFER,uv,gl.DYNAMIC_DRAW);gl.enableVertexAttribArray(aUV);gl.vertexAttribPointer(aUV,2,gl.FLOAT,false,0,0);
+    gl.drawElements(gl.TRIANGLES,nIdx,gl.UNSIGNED_SHORT,0)}
+  function sampleD(x,y){const fx=clamp(x/W*gw,0,gw-.001),fy=clamp(y/H*gh,0,gh-.001),i=fx|0,j=fy|0,u=fx-i,v=fy-j,g1=gw+1,a=j*g1+i,b=a+1,c=a+g1,d=c+1;
+    const f=o=>((B[2*a+o]+P[2*a+o])*(1-u)+(B[2*b+o]+P[2*b+o])*u)*(1-v)+((B[2*c+o]+P[2*c+o])*(1-u)+(B[2*d+o]+P[2*d+o])*u)*v;return[f(0),f(1)]}
+  const limit=()=>.22*Math.min(W,H);
+  function capB(k){const m=limit(),l=Math.hypot(B[2*k],B[2*k+1]);if(l>m){B[2*k]*=m/l;B[2*k+1]*=m/l}}
+  function snap(){const c1=mkc(mS.width,mS.height),c2=mkc(mL.width,mL.height);c1.getContext('2d').drawImage(mS,0,0);c2.getContext('2d').drawImage(mL,0,0);undo.push({B:new Float32Array(B),c1,c2,mt:maskTouched});if(undo.length>10)undo.shift()}
+  function undoLast(){const u=undo.pop();if(!u)return false;B.set(u.B);for(const[m,c]of[[mS,u.c1],[mL,u.c2]]){const x=m.getContext('2d');x.clearRect(0,0,m.width,m.height);x.drawImage(c,0,0)}maskTouched=true;maskDirty=true;render();return true}
+  function push(a,b,r,st){const dx=(b[0]-a[0])*st,dy=(b[1]-a[1])*st;eachIn(b[0],b[1],r,(k,x,y)=>{const ex=x-b[0],ey=y-b[1],t=(ex*ex+ey*ey)/(r*r);if(t>=1)return;const f=(1-t)*(1-t);B[2*k]-=dx*f;B[2*k+1]-=dy*f;capB(k)})}
+  function bloat(c,r,st,sign){eachIn(c[0],c[1],r,(k,x,y)=>{const ex=x-c[0],ey=y-c[1],t=(ex*ex+ey*ey)/(r*r);if(t>=1)return;const f=(1-t)*(1-t)*st;B[2*k]-=sign*(ex+B[2*k])*f;B[2*k+1]-=sign*(ey+B[2*k+1])*f;capB(k)})}
+  function dab(m,c,r,a,erase){const x=m.getContext('2d');x.save();x.globalCompositeOperation=erase?'destination-out':'source-over';const g=x.createRadialGradient(c[0]*ms,c[1]*ms,0,c[0]*ms,c[1]*ms,r*ms);g.addColorStop(0,`rgba(255,255,255,${a})`);g.addColorStop(1,'rgba(255,255,255,0)');x.fillStyle=g;x.beginPath();x.arc(c[0]*ms,c[1]*ms,r*ms,0,7);x.fill();x.restore();maskDirty=true;maskTouched=true}
+  function paint(kind,c,r,st){const d=sampleD(c[0],c[1]);dab(kind==='S'?mS:mL,[c[0]+d[0],c[1]+d[1]],r,st)}
+  function restore(c,r,st){eachIn(c[0],c[1],r,(k,x,y)=>{const ex=x-c[0],ey=y-c[1],t=(ex*ex+ey*ey)/(r*r);if(t>=1)return;const f=1-(1-t)*(1-t)*st;B[2*k]*=f;B[2*k+1]*=f});const d=sampleD(c[0],c[1]),q=[c[0]+d[0],c[1]+d[1]];dab(mS,q,r,st,true);dab(mL,q,r,st,true)}
+  function resetBrush(){snap();B.fill(0);for(const m of[mS,mL])m.getContext('2d').clearRect(0,0,m.width,m.height);maskDirty=true;maskTouched=true;render()}
+  return{cv,load,recompute,render,snap,undo:undoLast,push,bloat,paint,restore,resetBrush,
+    size:()=>[W,H],canUndo:()=>undo.length>0,
+    hasBrush:()=>{if(maskTouched)return true;for(let i=0;i<B.length;i++)if(B[i]!==0)return true;return false},
+    state:()=>({brush:new Float32Array(B),gw,gh,maskS:maskTouched?mS.toDataURL('image/png'):null,maskL:maskTouched?mL.toDataURL('image/png'):null}),
+    jpeg:()=>{render();return cv.toDataURL('image/jpeg',.9)},
+    thumb:()=>{render();const s=140/Math.max(W,H),c=mkc(W*s,H*s);c.getContext('2d').drawImage(cv,0,0,c.width,c.height);return c.toDataURL('image/jpeg',.8)}}
+})();
+
+/* ============ estado de la aplicación ============ */
+const S={settings:structuredClone(DEFAULT_SETTINGS),patients:[],view:'list',pid:null,tab:'datos',q:'',filter:''};
+const ui={photos:[],photoId:null,mod:'',placing:null,tool:'mover',size:8,power:50,cmp:'after',split:50,loaded:false,pending:null,view:{z:1,tx:0,ty:0}};
+let DL=null;
+const patient=()=>S.patients.find(p=>p.id===S.pid);
+const curPhoto=()=>ui.photos.find(p=>p.id===ui.photoId);
+const savePatient=(()=>{let t;return p=>{p.updatedAt=Date.now();clearTimeout(t);t=setTimeout(()=>Store.put('patients',p).then(chipSaved).catch(saveErr),400)}})();
+const saveSettings=()=>Store.put('kv',S.settings,'settings').then(chipSaved).catch(saveErr);
+function chipSaved(){const c=$('#saveChip');if(Store.persistent()){c.className='chip ok';c.textContent='Guardado en este dispositivo'}else{c.className='chip warn';c.textContent='Sin almacenamiento local'}}
+function saveErr(e){console.error(e);const c=$('#saveChip');c.className='chip warn';c.textContent='No se pudo guardar';toast('No se pudo guardar en este dispositivo. Exporta un respaldo desde Ajustes.')}
+function planTotals(p){let lo=0,hi=0,sub=0,nq=0,ref=false;for(const it of p.plan||[]){if(!it.extra&&!it.ns){lo+=+it.minH||0;hi+=+it.maxH||0;nq++;if(it.ref)ref=true}sub+=+it.price||0}const disc=sub*(clamp(+p.discount||0,0,100)/100);return{lo,hi,sub,disc,total:sub-disc,nq,ref,n:(p.plan||[]).filter(i=>!i.extra).length}}
+function setStatus(p,st){if(p.status===st)return;p.status=st;p.journey=p.journey||[];p.journey.push({id:uid(),date:today(),type:'Cambio de etapa',note:'Pasa a '+st});savePatient(p)}
+function dueInfo(p){if(!p.nextDate)return null;const d=Math.round((new Date(p.nextDate+'T00:00:00')-new Date(today()+'T00:00:00'))/864e5);return{d,cls:d<0?'crit':d<=3?'warn':'',txt:d<0?'Contacto vencido '+fmtDate(p.nextDate):d===0?'Contactar hoy':'Próximo contacto '+fmtDate(p.nextDate)}}
+function brand(){$('#brandName').textContent=S.settings.tool;$('#brandSub').textContent=[S.settings.doctor,S.settings.clinic].filter(Boolean).join(' · ');const ini=(S.settings.doctor||'').replace(/^(dra?\.?|doctora?)\s+/i,'').split(/\s+/).map(w=>w[0]||'').join('').slice(0,2).toUpperCase();$('.mono').textContent=ini||'YH'}
+
+/* ============ foto de ejemplo (ilustración) ============ */
+function demoFace(){
+  const c=document.createElement('canvas');c.width=900;c.height=1200;const x=c.getContext('2d');
+  let g=x.createLinearGradient(0,0,0,1200);g.addColorStop(0,'#CFCBD6');g.addColorStop(1,'#A7A2B1');x.fillStyle=g;x.fillRect(0,0,900,1200);
+  const el=(cx,cy,rx,ry,f)=>{x.fillStyle=f;x.beginPath();x.ellipse(cx,cy,rx,ry,0,0,7);x.fill()};
+  el(450,1290,440,240,'#5B5567');
+  g=x.createLinearGradient(0,840,0,1080);g.addColorStop(0,'#B98A72');g.addColorStop(1,'#CFA088');x.fillStyle=g;x.fillRect(352,820,196,270);
+  el(450,470,288,335,'#3A2E2A');el(196,575,34,72,'#D0A086');el(704,575,34,72,'#D0A086');el(200,578,16,44,'#B98A72');el(700,578,16,44,'#B98A72');
+  g=x.createRadialGradient(450,520,60,450,570,360);g.addColorStop(0,'#EBC6AE');g.addColorStop(1,'#D3A287');el(450,575,246,332,g);
+  x.fillStyle='#3A2E2A';x.beginPath();x.moveTo(200,470);x.bezierCurveTo(230,220,670,220,700,470);x.bezierCurveTo(640,330,560,300,450,310);x.bezierCurveTo(340,300,260,330,200,470);x.fill();
+  const st=(w,col,fn)=>{x.lineWidth=w;x.strokeStyle=col;x.lineCap='round';x.beginPath();fn();x.stroke()};
+  for(const sx of[-1,1]){const X=v=>450+sx*v;
+    st(15,'#4A3A33',()=>{x.moveTo(X(48),462);x.quadraticCurveTo(X(105),436,X(168),462)});
+    el(X(100),492,56,16,'rgba(150,100,85,.45)');
+    el(X(100),508,42,19,'#F6F1EE');el(X(100),508,18,18,'#5E4636');el(X(100),508,8,8,'#16110F');el(X(94),502,3,3,'#fff');
+    st(5,'#3A2A25',()=>{x.moveTo(X(56),508);x.quadraticCurveTo(X(100),480,X(144),508)});
+    st(9,'rgba(140,95,90,.35)',()=>{x.moveTo(X(60),536);x.quadraticCurveTo(X(100),560,X(142),538)});
+    st(4,'rgba(120,80,70,.4)',()=>{x.moveTo(X(152),500);x.lineTo(X(172),492);x.moveTo(X(154),512);x.lineTo(X(176),514)});
+    st(11,'rgba(165,115,95,.5)',()=>{x.moveTo(X(22),520);x.quadraticCurveTo(X(34),600,X(52),662)});
+    el(X(26),678,10,6,'#5A3A32');
+    st(9,'rgba(140,90,75,.6)',()=>{x.moveTo(X(52),668);x.quadraticCurveTo(X(66),650,X(50),632)});
+    st(9,'rgba(120,72,58,.55)',()=>{x.moveTo(X(58),694);x.quadraticCurveTo(X(96),730,X(84),786)});
+    st(6,'rgba(120,72,58,.4)',()=>{x.moveTo(X(72),790);x.quadraticCurveTo(X(80),820,X(74),846)});
+    el(X(150),640,50,36,'rgba(225,150,140,.22)')}
+  el(450,668,30,20,'rgba(255,235,220,.5)');
+  st(13,'#B4625F',()=>{x.moveTo(385,772);x.quadraticCurveTo(450,756,515,772)});st(9,'#C7797A',()=>{x.moveTo(396,782);x.quadraticCurveTo(450,806,504,782)});
+  st(8,'rgba(150,100,85,.35)',()=>{x.moveTo(410,866);x.quadraticCurveTo(450,880,490,866)});
+  x.fillStyle='rgba(34,28,46,.75)';x.font='600 22px sans-serif';x.fillText('Ilustración de ejemplo',24,1176);
+  return c.toDataURL('image/jpeg',.92)}
+async function seedDemo(){
+  const pid='demo',p={id:pid,demo:true,name:'Paciente de ejemplo',doc:'',birth:'1986-04-12',phone:'',email:'',notes:'Ficha de muestra para conocer la herramienta. Puedes eliminarla desde la pestaña Datos.',status:'Valoración',date:'',discount:0,createdAt:Date.now(),updatedAt:Date.now(),
+    plan:[{uid:uid(),procId:'rino',name:'Rinoplastia',minH:3,maxH:4,price:0,note:''},{uid:uid(),procId:'blefaro',name:'Blefaroplastia',minH:1,maxH:2,price:0,note:''}]};
+  const ph={id:uid(),patientId:pid,label:'Rostro de frente',orig:demoFace(),w:900,h:1200,after:null,inPdf:true,createdAt:Date.now(),mods:{
+    rinoFrontal:{a:{raiz:[450,512],punta:[450,668],alaI:[394,670],alaD:[506,670]},s:{dorso:-45,base:-35,punta:-20}},
+    parpados:{a:{ojoI:[350,508],ojoD:[550,508]},s:{sup:45,inf:60}},
+    lifting:{a:{sIa:[392,694],sIb:[366,786],sDa:[508,694],sDb:[534,786],menton:[450,905]},s:{surco:75}}}};
+  await Store.put('patients',p);await Store.put('photos',ph);S.patients.push(p)}
+
+/* ============ render ============ */
+const app=$('#app');
+function render(){
+  $('#navList').setAttribute('aria-current',S.view!=='settings'?'page':'false');$('#navSet').setAttribute('aria-current',S.view==='settings'?'page':'false');
+  if(S.view==='settings')return renderSettings();
+  if(S.view==='patient'&&patient())return renderPatient();
+  S.view='list';renderList()}
+function filtered(){const q=S.q.trim().toLowerCase();return S.patients.filter(p=>(!q||[p.name,p.doc,p.phone].join(' ').toLowerCase().includes(q))&&(!S.filter||p.status===S.filter)).sort((a,b)=>(b.updatedAt||0)-(a.updatedAt||0))}
+function listHTML(){return filtered().map(pItem).join('')||`<div class="card muted">No hay pacientes con ese criterio. Empieza una con el botón Nueva consulta.</div>`}
+function renderList(){
+  let tot=0,prog=0,due=0;for(const p of S.patients){if(p.status!=='Descartada')tot+=planTotals(p).total;if(p.status==='Programada')prog++;const d=dueInfo(p);if(d&&d.d<=7)due++}
+  app.innerHTML=`
+  <div class="row spread"><h1>Pacientes</h1><div class="row"><button class="btn" data-act="xlsAll" type="button">Exportar base a Excel</button><button class="btn primary" data-act="newPatient" type="button">Nueva consulta</button></div></div>
+  <div class="summary"><div class="card"><span class="lbl">Pacientes</span><b class="num">${S.patients.length}</b></div><div class="card"><span class="lbl">Cirugías programadas</span><b class="num">${prog}</b></div><div class="card"><span class="lbl">Contactos en 7 días o vencidos</span><b class="num">${due}</b></div><div class="card"><span class="lbl">Valor de propuestas activas</span><b class="num">${esc(money(tot))}</b></div></div>
+  <div class="field"><label for="q">Buscar</label><input class="in" id="q" type="search" placeholder="Nombre, documento o teléfono" value="${esc(S.q)}"></div>
+  <div class="mods" role="group" aria-label="Filtrar por etapa">${['',...STATES].map(st=>`<button class="modbtn" type="button" data-act="filter" data-s="${st}" aria-pressed="${S.filter===st}">${st||'Todas'} <span class="num muted">${st?S.patients.filter(p=>p.status===st).length:S.patients.length}</span></button>`).join('')}</div>
+  <div class="plist" id="plist">${listHTML()}</div>`}
+function pItem(p){const t=planTotals(p),procs=(p.plan||[]).filter(i=>!i.extra).map(i=>`<span class="chip">${esc(i.name)}</span>`).join(''),d=dueInfo(p);
+  return`<button class="pitem" data-act="openPatient" data-id="${esc(p.id)}" type="button">${p.thumb?`<img class="thumb" src="${p.thumb}" alt="">`:`<span class="thumb">${esc((p.name||'?')[0].toUpperCase())}</span>`}
+   <span class="grow"><span class="name">${esc(p.name||'Sin nombre')}</span>${p.demo?' <span class="chip">Ejemplo</span>':''}<span class="meta">${procs||'<span class="muted small">Sin procedimientos en el plan</span>'}</span></span>
+   <span class="right"><span class="pill ${STATE_CLS[p.status]||''}">${esc(p.status||'Valoración')}</span><span class="num small">${t.nq?esc(hrs(t.lo,t.hi))+' · ':''}${t.total?esc(money(t.total)):'Valor por definir'}</span>${p.date?`<span class="small muted">Cirugía estimada ${esc(fmtDate(p.date))}</span>`:''}${d?`<span class="chip ${d.cls}">${esc(d.txt)}</span>`:''}</span></button>`}
+function renderPatient(){
+  const p=patient();
+  app.innerHTML=`
+  <div class="row"><button class="btn ghost sm" data-act="nav" data-v="list" type="button">← Pacientes</button></div>
+  <div class="row spread"><h1 id="pName">${esc(p.name||'Paciente sin nombre')}</h1><span class="pill ${STATE_CLS[p.status]||''}" id="pState">${esc(p.status)}</span></div>
+  <div class="tabs" role="tablist">${[['sim','Simulación'],['plan','Plan y propuesta'],['seg','Seguimiento'],['datos','Datos']].map(([k,l])=>`<button role="tab" type="button" data-act="tab" data-t="${k}" aria-selected="${S.tab===k}">${l}</button>`).join('')}</div>
+  <div id="tab"></div>`;
+  if(S.tab==='datos')renderDatos(p);else if(S.tab==='sim')renderSim(p);else if(S.tab==='seg')renderSeg(p);else renderPlan(p)}
+function renderSeg(p){const J=(p.journey||[]).slice().sort((a,b)=>(b.date||'').localeCompare(a.date||''));
+  $('#tab').innerHTML=`<div style="display:flex;flex-direction:column;gap:14px">
+  <div class="card col"><h2>Etapa de la paciente</h2><div class="mods">${STATES.map((st,i)=>`<button class="modbtn" type="button" data-act="setState" data-s="${st}" aria-pressed="${p.status===st}">${i+1}. ${st}</button>`).join('')}</div></div>
+  <div class="card col"><h2>Próximo contacto</h2><div class="grid2"><div class="field"><label for="f_next">Fecha</label><input class="in" type="date" id="f_next" data-p="nextDate" value="${esc(p.nextDate)}"></div><div class="field"><label for="f_nextn">Qué hay que hacer</label><input class="in" id="f_nextn" data-p="nextNote" value="${esc(p.nextNote)}"></div></div></div>
+  <div class="card col"><h2>Registrar seguimiento</h2><div class="grid2"><div class="field"><label for="jDate">Fecha</label><input class="in" type="date" id="jDate" value="${today()}"></div><div class="field"><label for="jType">Tipo</label><select class="in" id="jType">${JTYPES.map(t=>`<option>${t}</option>`).join('')}</select></div></div>
+   <div class="field"><label for="jNote">Nota</label><textarea class="in" id="jNote"></textarea></div><div class="row"><button class="btn primary" data-act="addJ" type="button">Agregar al historial</button></div></div>
+  <div class="card col"><h2>Historial</h2>${J.length?`<ol class="tl">${J.map(j=>`<li><span class="num small muted">${esc(fmtDate(j.date))}</span><span class="pill">${esc(j.type)}</span><span class="grow">${esc(j.note)}</span><button class="btn sm ghost danger" data-act="delJ" data-id="${j.id}" type="button">Quitar</button></li>`).join('')}</ol>`:`<div class="muted">Aún no hay registros. Los cambios de etapa se anotan solos.</div>`}</div></div>`}
+function renderDatos(p){
+  $('#tab').innerHTML=`<div class="card" style="display:flex;flex-direction:column;gap:14px">
+  <div class="grid2">
+   <div class="field"><label for="f_name">Nombre completo</label><input class="in" id="f_name" data-p="name" value="${esc(p.name)}" autocomplete="off"></div>
+   <div class="field"><label for="f_doc">Documento</label><input class="in" id="f_doc" data-p="doc" value="${esc(p.doc)}" autocomplete="off"></div>
+   <div class="field"><label for="f_birth">Fecha de nacimiento ${age(p.birth)!==''?`· ${age(p.birth)} años`:''}</label><input class="in" id="f_birth" type="date" data-p="birth" value="${esc(p.birth)}"></div>
+   <div class="field"><label for="f_phone">Teléfono</label><input class="in" id="f_phone" type="tel" data-p="phone" value="${esc(p.phone)}"></div>
+   <div class="field"><label for="f_email">Correo</label><input class="in" id="f_email" type="email" data-p="email" value="${esc(p.email)}"></div>
+   <div class="field"><label for="f_status">Estado</label><select class="in" id="f_status" data-p="status">${STATES.map(s=>`<option ${s===p.status?'selected':''}>${s}</option>`).join('')}</select></div>
+  </div>
+  <div class="field"><label for="f_notes">Motivo de consulta y observaciones</label><textarea class="in" id="f_notes" data-p="notes">${esc(p.notes)}</textarea></div>
+  <div class="row spread"><button class="btn danger" data-act="delPatient" type="button">Eliminar paciente</button><button class="btn primary" data-act="tab" data-t="sim" type="button">Ir a la simulación</button></div></div>`}
+
+/* ---------- simulación ---------- */
+const stageEl=document.createElement('div');stageEl.className='stage';stageEl.id='stage';
+stageEl.innerHTML=`<div class="world" id="world"><img id="imgBefore" alt="Foto original"><div id="glWrap" style="position:absolute;left:0;top:0;overflow:hidden"><div id="glSlot"></div></div><div class="splitline hide" id="splitLine"></div><div id="anchors" style="transition:opacity .15s"></div></div>
+<div class="ring" id="ring"></div><div class="hint hide" id="hint"></div><span class="tag hide" id="tagA" style="left:10px">Antes</span><span class="tag hide" id="tagB" style="right:10px">Simulación</span>
+<div class="splitrange hide" id="splitWrap"><input type="range" id="splitRange" min="0" max="100" value="50" aria-label="Posición de la división"></div>
+<div class="stage-ui"><div class="seg" role="group" aria-label="Comparar"><button type="button" data-act="cmp" data-c="before">Antes</button><button type="button" data-act="cmp" data-c="split">Dividir</button><button type="button" data-act="cmp" data-c="after">Simulación</button></div>
+<div class="seg"><button type="button" data-act="present" id="btnPresent">Presentar</button></div>
+<div class="seg" role="group" aria-label="Zoom"><button type="button" data-act="zoom" data-d="-1" aria-label="Alejar">−</button><button type="button" data-act="zoom" data-d="0">Ajustar</button><button type="button" data-act="zoom" data-d="1" aria-label="Acercar">+</button></div></div>`;
+stageEl.querySelector('#glSlot').replaceWith(Engine.cv);
+const world=stageEl.querySelector('#world'),ring=stageEl.querySelector('#ring');
+const TOOLS=[['mover','Mover','<path d="M12 3v18M3 12h18M12 3l-3 3M12 3l3 3M12 21l-3-3M12 21l3-3M3 12l3-3M3 12l3 3M21 12l-3-3M21 12l-3 3"/>'],
+ ['empujar','Empujar','<path d="M4 16c4-10 9-10 12-2"/><path d="M13 9l4 5-6 1"/>'],
+ ['inflar','Aumentar','<circle cx="12" cy="12" r="8"/><path d="M12 8v8M8 12h8"/>'],
+ ['reducir','Reducir','<circle cx="12" cy="12" r="8"/><path d="M8 12h8"/>'],
+ ['suavizar','Suavizar piel','<path d="M4 9c3-3 5 3 8 0s5 3 8 0M4 15c3-3 5 3 8 0s5 3 8 0"/>'],
+ ['atenuar','Atenuar surco','<path d="M5 5c3 5 3 9 0 14"/><path d="M11 8h8M11 12h8M11 16h8" stroke-dasharray="2 3"/>'],
+ ['restaurar','Restaurar','<path d="M5 12a7 7 0 1 0 2-5"/><path d="M5 4v4h4"/>']];
+async function renderSim(p){
+  await flushSim();
+  ui.photos=(await Store.photosOf(p.id)).sort((a,b)=>(a.createdAt||0)-(b.createdAt||0));
+  if(S.view!=='patient'||S.tab!=='sim'||S.pid!==p.id)return;
+  if(!ui.photos.find(x=>x.id===ui.photoId))ui.photoId=ui.photos[0]?.id||null;
+  const standalone=(()=>{try{return window.top===window.self}catch(e){return false}})()&&!!(navigator.mediaDevices&&navigator.mediaDevices.getUserMedia);
+  $('#tab').innerHTML=`<div style="display:flex;flex-direction:column;gap:12px">
+  <div class="strip">${ui.photos.map(ph=>`<button class="ph" type="button" data-act="selPhoto" data-id="${ph.id}" aria-pressed="${ph.id===ui.photoId}"><img src="${ph.after||ph.orig}" alt=""><span>${esc(ph.label)}</span></button>`).join('')}
+   <div class="addph"><button class="btn sm primary" data-act="takePhoto" type="button">Tomar foto</button><button class="btn sm" data-act="pickPhoto" type="button">Elegir imagen</button>${standalone?`<button class="btn sm" data-act="webcam" type="button">Cámara web</button>`:''}</div></div>
+  ${ui.photos.length?`<div class="sim"><div id="stageSlot"></div><div class="panel" id="panel"></div></div>`:`<div class="card col"><h2>Empieza la consulta</h2><div class="field"><label for="f_qname">Nombre de la paciente</label><input class="in" id="f_qname" data-p="name" value="${esc(p.name)}" autocomplete="off"></div><div class="muted">Después toma o elige la primera foto. En iPhone y iPad, Tomar foto abre la cámara. Usa fondo liso, buena luz y la cámara a la altura de la zona a simular.</div></div>`}</div>`;
+  if(!ui.photos.length&&!p.name)$('#f_qname')?.focus();
+  if(ui.photos.length){$('#stageSlot').replaceWith(stageEl);await openPhoto()}}
+async function openPhoto(){
+  const ph=curPhoto();if(!ph)return;ui.loaded=false;ui.placing=null;
+  const used=Object.keys(ph.mods||{}).filter(k=>MODULES[k]&&modPlaced(ph,k));
+  if(!ui.mod||!used.includes(ui.mod))ui.mod=used[0]||'';
+  try{await Engine.load(ph)}catch(e){toast(e.message||'No se pudo abrir la foto');return}
+  const[W,H]=Engine.size();stageEl.querySelector('#imgBefore').src=ph.orig;const im=stageEl.querySelector('#imgBefore');im.style.width=W+'px';im.style.height=H+'px';world.style.width=W+'px';world.style.height=H+'px';
+  ui.loaded=true;fitView();setCmp('after');renderPanel();drawAnchors();if(!ph.after&&used.some(k=>modActive(ph,k)))scheduleSave()}
+function fitView(){const r=stageEl.getBoundingClientRect(),[W,H]=Engine.size();if(!W||!r.width)return;const z=Math.min(r.width/W,r.height/H);ui.view={z,tx:(r.width-W*z)/2,ty:(r.height-H*z)/2,fit:z};applyView()}
+function applyView(){const v=ui.view;world.style.transform=`translate(${v.tx}px,${v.ty}px) scale(${v.z})`;world.style.setProperty('--inv',1/v.z)}
+function zoomAt(f,cx,cy){const v=ui.view,r=stageEl.getBoundingClientRect(),z=clamp(v.z*f,(v.fit||v.z)*.6,(v.fit||v.z)*10),px=cx-r.left,py=cy-r.top,wx=(px-v.tx)/v.z,wy=(py-v.ty)/v.z;v.z=z;v.tx=px-wx*z;v.ty=py-wy*z;applyView()}
+function setCmp(c){ui.cmp=c;$$('[data-act="cmp"]',stageEl).forEach(b=>b.setAttribute('aria-pressed',b.dataset.c===c));
+  {const[W,H]=Engine.size(),gwp=stageEl.querySelector('#glWrap'),off=c==='split'?Math.round(ui.split/100*W):0;gwp.style.left=off+'px';gwp.style.width=(W-off)+'px';gwp.style.height=H+'px';Engine.cv.style.left=(-off)+'px';gwp.style.visibility=c==='before'?'hidden':'visible'}
+  const sp=c==='split';stageEl.querySelector('#splitWrap').classList.toggle('hide',!sp);const ln=stageEl.querySelector('#splitLine');ln.classList.toggle('hide',!sp);ln.style.left=ui.split+'%';
+  stageEl.querySelector('#tagA').classList.toggle('hide',c==='after');stageEl.querySelector('#tagB').classList.toggle('hide',c!=='split');
+  stageEl.querySelector('#anchors').classList.toggle('hide',c!=='after');stageEl.classList.toggle('pan',ui.tool==='mover'||c!=='after')}
+function renderPanel(){
+  const ph=curPhoto(),el=$('#panel');if(!ph||!el)return;
+  const groups=['Rostro','Cuerpo'].map(g=>`<div class="lbl" style="margin-top:4px">${g}</div><div class="mods">${Object.entries(MODULES).filter(([,m])=>m.group===g).map(([k,m])=>`<button class="modbtn ${modActive(ph,k)?'on':''}" type="button" data-act="selMod" data-m="${k}" aria-pressed="${ui.mod===k}">${esc(m.name)}</button>`).join('')}</div>`).join('');
+  let body='';
+  if(ui.mod){const M=MODULES[ui.mod],st=modState(ph,ui.mod),placed=modPlaced(ph,ui.mod);
+    const idx=ui.placing?ui.placing.i:-1;
+    const steps=`<ol class="steps">${M.anchors.map((a,i)=>`<li class="${st.a[a.k]&&i!==idx?'done':''} ${i===idx?'now':''}"><b>${i+1}</b>${esc(a.label)}</li>`).join('')}</ol>`;
+    if(!placed||ui.placing)body=`<div class="note">${esc(M.tip)} Toca en la foto cada punto en el orden indicado. Puedes acercar con dos dedos o con la rueda del ratón.</div>${steps}<div class="row"><button class="btn sm primary" data-act="place" type="button">${ui.placing?'Marcando puntos…':'Marcar puntos'}</button>${ui.placing?`<button class="btn sm" data-act="placeCancel" type="button">Cancelar</button>`:''}</div>`;
+    else body=`${M.sliders.map(d=>{const v=st.s[d.k]??d.def;return`<div class="sl"><label for="s_${d.k}">${esc(d.label)}</label><output id="o_${d.k}" class="num">${v>0&&d.min<0?'+':''}${v}</output><input type="range" id="s_${d.k}" data-s="${d.k}" min="${d.min}" max="${d.max}" value="${v}"><div class="ends"><span>${esc(d.lo)}</span><span>${esc(d.hi)}</span></div></div>`}).join('')}
+      <div class="row"><button class="btn sm" data-act="modReset" type="button">Restablecer</button><button class="btn sm" data-act="place" type="button">Volver a marcar puntos</button></div><div class="small muted">Arrastra los puntos numerados sobre la foto para afinar la zona.</div>`}
+  el.innerHTML=`
+  <div class="card" style="display:flex;flex-direction:column;gap:10px"><h3>Procedimiento a simular</h3>${groups}${body?`<hr style="border:0;border-top:1px solid var(--line);width:100%;margin:2px 0">${body}`:`<div class="small muted">Elige un procedimiento, marca los puntos anatómicos y ajusta las medidas con los deslizadores.</div>`}</div>
+  <div class="card" style="display:flex;flex-direction:column;gap:10px"><h3>Ajuste libre con pincel</h3>
+   <div class="tools">${TOOLS.map(([k,l,svg])=>`<button class="tool" type="button" data-act="tool" data-t="${k}" aria-pressed="${ui.tool===k}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${svg}</svg>${l}</button>`).join('')}<button class="tool" type="button" data-act="undo"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 7H5V3"/><path d="M5 7c3-4 10-4 13 1s-1 11-7 11"/></svg>Deshacer</button></div>
+   <div class="sl"><label for="bsize">Tamaño del pincel</label><output id="o_bsize" class="num">${ui.size}</output><input type="range" id="bsize" min="2" max="30" value="${ui.size}"></div>
+   <div class="sl"><label for="bpow">Intensidad</label><output id="o_bpow" class="num">${ui.power}</output><input type="range" id="bpow" min="10" max="100" value="${ui.power}"></div>
+   <div class="small muted">Empujar desplaza tejido, útil para colgajos y contornos. Suavizar piel atenúa estrías y flacidez. Atenuar surco aclara pliegues y líneas de expresión.</div>
+   <div class="row"><button class="btn sm" data-act="brushReset" type="button">Borrar ajustes de pincel</button></div></div>
+  <div class="card" style="display:flex;flex-direction:column;gap:10px"><h3>Esta foto</h3>
+   <div class="field"><label for="phLabel">Vista</label><select class="in" id="phLabel">${LABELS.map(l=>`<option ${l===ph.label?'selected':''}>${l}</option>`).join('')}</select></div>
+   <label class="row" for="phPdf"><input type="checkbox" id="phPdf" ${ph.inPdf!==false?'checked':''}> Incluir antes y después en el PDF</label>
+   <div class="row"><button class="btn sm" data-act="saveImg" type="button">Guardar imagen simulada</button><button class="btn sm danger" data-act="delPhoto" type="button">Eliminar foto</button></div></div>`;
+  updateHint()}
+function updateHint(){const h=stageEl.querySelector('#hint');if(ui.placing){const M=MODULES[ui.placing.mod],a=M.anchors[ui.placing.i];h.textContent=`Punto ${ui.placing.i+1} de ${M.anchors.length}: ${a.label}`;h.classList.remove('hide')}else h.classList.add('hide')}
+function drawAnchors(){const box=stageEl.querySelector('#anchors'),ph=curPhoto();if(!ph||!ui.mod){box.innerHTML='';return}const M=MODULES[ui.mod],st=modState(ph,ui.mod);
+  box.innerHTML=M.anchors.map((a,i)=>st.a[a.k]?`<div class="anchor" data-k="${a.k}" style="left:${st.a[a.k][0]}px;top:${st.a[a.k][1]}px" title="${esc(a.label)}"><i>${i+1}</i></div>`:'').join('')}
+function simChanged(){Engine.recompute();Engine.render();scheduleSave()}
+function scheduleSave(){clearTimeout(ui.pending);const c=$('#saveChip');c.className='chip';c.textContent='Guardando…';ui.pending=setTimeout(()=>{ui.pending=null;savePhotoNow()},1100)}
+async function savePhotoNow(){const ph=curPhoto();if(!ph||!ui.loaded)return;Object.assign(ph,Engine.state());const changed=Engine.hasBrush()||Object.keys(ph.mods||{}).some(k=>MODULES[k]&&modActive(ph,k));ph.after=changed?Engine.jpeg():null;ph.updatedAt=Date.now();
+  try{await Store.put('photos',ph);const p=S.patients.find(x=>x.id===ph.patientId);if(p&&ui.photos[0]&&ui.photos[0].id===ph.id){p.thumb=Engine.thumb();savePatient(p)}chipSaved();const t=$(`.ph[data-id="${ph.id}"] img`);if(t)t.src=ph.after||ph.orig}catch(e){saveErr(e)}}
+async function flushSim(){if(ui.pending){clearTimeout(ui.pending);ui.pending=null;await savePhotoNow()}}
+async function addPhotoFromBlob(blob){
+  const p=patient();if(!p)return;let url;try{url=URL.createObjectURL(blob);const img=await loadImg(url);const m=1500/Math.max(img.naturalWidth,img.naturalHeight),s=Math.min(1,m);
+    const c=document.createElement('canvas');c.width=Math.round(img.naturalWidth*s);c.height=Math.round(img.naturalHeight*s);c.getContext('2d').drawImage(img,0,0,c.width,c.height);
+    await flushSim();const ph={id:uid(),patientId:p.id,label:c.height>=c.width?'Rostro de frente':'Otra',orig:c.toDataURL('image/jpeg',.92),w:c.width,h:c.height,after:null,inPdf:true,mods:{},createdAt:Date.now()};
+    await Store.put('photos',ph);ui.photoId=ph.id;ui.mod='';if(!p.thumb){const t=document.createElement('canvas'),k=140/Math.max(c.width,c.height);t.width=c.width*k;t.height=c.height*k;t.getContext('2d').drawImage(c,0,0,t.width,t.height);p.thumb=t.toDataURL('image/jpeg',.8);savePatient(p)}
+    S.tab='sim';renderPatient()}catch(e){console.error(e);toast('No se pudo leer la imagen. Prueba con un archivo JPG o PNG.')}finally{if(url)URL.revokeObjectURL(url)}}
+function openWebcam(){const o=$('#overlay');o.innerHTML=`<div class="modal" role="dialog" aria-modal="true"><div class="card" style="max-width:640px"><h2>Cámara web</h2><video id="wcVid" autoplay playsinline muted></video><div class="row" style="justify-content:flex-end"><button class="btn" id="wcNo" type="button">Cancelar</button><button class="btn primary" id="wcYes" type="button">Capturar</button></div></div></div>`;
+  let stream=null;const stop=()=>{if(stream)stream.getTracks().forEach(t=>t.stop());o.innerHTML=''};
+  navigator.mediaDevices.getUserMedia({video:{width:{ideal:1920},height:{ideal:1080},facingMode:'user'}}).then(s=>{stream=s;const v=$('#wcVid');if(v)v.srcObject=s;else stop()}).catch(()=>{stop();toast('No se pudo abrir la cámara. Revisa el permiso del navegador.')});
+  $('#wcNo').onclick=stop;$('#wcYes').onclick=()=>{const v=$('#wcVid');if(!v.videoWidth)return;const c=document.createElement('canvas');c.width=v.videoWidth;c.height=v.videoHeight;c.getContext('2d').drawImage(v,0,0);stop();c.toBlob(b=>b&&addPhotoFromBlob(b),'image/jpeg',.95)}}
+
+/* punteros sobre el lienzo */
+(()=>{const ptrs=new Map();let gesture=null,pan=null,tap=null,stroke=null,raf=0,splitDrag=false;
+  const moveSplit=e=>{const r=world.getBoundingClientRect();ui.split=clamp((e.clientX-r.left)/r.width*100,0,100);stageEl.querySelector('#splitRange').value=ui.split;setCmp('split')};
+  const toImg=e=>{const r=world.getBoundingClientRect(),[W,H]=Engine.size();return[(e.clientX-r.left)/r.width*W,(e.clientY-r.top)/r.height*H]};
+  const radius=()=>{const[W,H]=Engine.size();return ui.size/100*Math.min(W,H)};
+  const showRing=e=>{if(ui.tool==='mover'||ui.cmp!=='after'||ui.placing){ring.style.display='none';return}const r=stageEl.getBoundingClientRect(),d=radius()*ui.view.z*2;ring.style.display='block';ring.style.width=ring.style.height=d+'px';ring.style.left=(e.clientX-r.left)+'px';ring.style.top=(e.clientY-r.top)+'px'};
+  function loop(){if(!stroke)return;const pw=ui.power/100,r=radius(),c=stroke.cur,t=ui.tool;
+    if(t==='inflar')Engine.bloat(c,r,.05*pw,1);else if(t==='reducir')Engine.bloat(c,r,.05*pw,-1);else if(t==='suavizar')Engine.paint('S',c,r,.14*pw);else if(t==='atenuar')Engine.paint('L',c,r,.14*pw);else if(t==='restaurar')Engine.restore(c,r,.3*pw);
+    Engine.render();raf=requestAnimationFrame(loop)}
+  function endStroke(cancel){if(!stroke)return;cancelAnimationFrame(raf);stroke=null;if(cancel)Engine.undo();else scheduleSave()}
+  stageEl.addEventListener('pointerdown',e=>{if(e.target.closest('.stage-ui,.splitrange,.anchor')||!ui.loaded)return;try{stageEl.setPointerCapture(e.pointerId)}catch(_){ }ptrs.set(e.pointerId,{x:e.clientX,y:e.clientY});
+    if(ptrs.size===2){endStroke(true);pan=null;tap=null;splitDrag=false;const[a,b]=[...ptrs.values()];gesture={d:Math.hypot(a.x-b.x,a.y-b.y)||1,z:ui.view.z,mx:(a.x+b.x)/2,my:(a.y+b.y)/2,tx:ui.view.tx,ty:ui.view.ty};return}
+    if(ptrs.size>2)return;
+    if(ui.placing){tap={x:e.clientX,y:e.clientY};pan={x:e.clientX,y:e.clientY,tx:ui.view.tx,ty:ui.view.ty};return}
+    if(ui.cmp==='split'){splitDrag=true;moveSplit(e);return}
+    if(ui.tool==='mover'||ui.cmp!=='after'){pan={x:e.clientX,y:e.clientY,tx:ui.view.tx,ty:ui.view.ty};return}
+    Engine.snap();const p=toImg(e);stroke={cur:p,prev:p};showRing(e);if(ui.tool!=='empujar')loop()});
+  stageEl.addEventListener('pointermove',e=>{if(ptrs.has(e.pointerId))ptrs.set(e.pointerId,{x:e.clientX,y:e.clientY});
+    if(e.pointerType==='mouse'||stroke)showRing(e);
+    if(gesture&&ptrs.size>=2){const[a,b]=[...ptrs.values()],d=Math.hypot(a.x-b.x,a.y-b.y),mx=(a.x+b.x)/2,my=(a.y+b.y)/2,r=stageEl.getBoundingClientRect(),v=ui.view,z=clamp(gesture.z*d/gesture.d,(v.fit||1)*.6,(v.fit||1)*10),wx=(gesture.mx-r.left-gesture.tx)/gesture.z,wy=(gesture.my-r.top-gesture.ty)/gesture.z;v.z=z;v.tx=mx-r.left-wx*z;v.ty=my-r.top-wy*z;applyView();return}
+    if(splitDrag&&ptrs.size===1){moveSplit(e);return}
+    if(pan){if(tap&&Math.hypot(e.clientX-tap.x,e.clientY-tap.y)>8)tap=null;if(!tap){ui.view.tx=pan.tx+e.clientX-pan.x;ui.view.ty=pan.ty+e.clientY-pan.y;applyView()}return}
+    if(stroke){const p=toImg(e);if(ui.tool==='empujar'){Engine.push(stroke.prev,p,radius(),.35+.65*ui.power/100);Engine.render()}stroke.prev=stroke.cur=p}});
+  const up=e=>{const had=ptrs.delete(e.pointerId);splitDrag=false;if(gesture){if(ptrs.size<2){gesture=null;pan=null;tap=null}return}
+    if(tap&&ui.placing&&had&&e.type==='pointerup'){placeAnchor(toImg(e))}tap=null;pan=null;endStroke(false);if(e.pointerType!=='mouse')ring.style.display='none'};
+  stageEl.addEventListener('pointerup',up);stageEl.addEventListener('pointercancel',up);stageEl.addEventListener('pointerleave',e=>{if(e.pointerType==='mouse'&&!stroke)ring.style.display='none'});
+  stageEl.addEventListener('wheel',e=>{if(!ui.loaded)return;e.preventDefault();zoomAt(e.deltaY<0?1.15:1/1.15,e.clientX,e.clientY)},{passive:false});
+  /* arrastre de puntos anatómicos */
+  let drag=null;stageEl.addEventListener('pointerdown',e=>{const a=e.target.closest('.anchor');if(!a)return;e.stopPropagation();drag={el:a,k:a.dataset.k};try{a.setPointerCapture(e.pointerId)}catch(_){ }},true);
+  stageEl.addEventListener('pointermove',e=>{if(!drag)return;const ph=curPhoto(),p=toImg(e),[W,H]=Engine.size();p[0]=clamp(p[0],0,W);p[1]=clamp(p[1],0,H);modState(ph,ui.mod).a[drag.k]=p;drag.el.style.left=p[0]+'px';drag.el.style.top=p[1]+'px';Engine.recompute();Engine.render()},true);
+  const dragEnd=()=>{if(drag){drag=null;scheduleSave()}};stageEl.addEventListener('pointerup',dragEnd,true);stageEl.addEventListener('pointercancel',dragEnd,true);
+  stageEl.querySelector('#splitRange').addEventListener('input',e=>{ui.split=+e.target.value;setCmp('split')});
+  new ResizeObserver(()=>{if(ui.loaded&&stageEl.isConnected&&Math.abs(ui.view.z-(ui.view.fit||0))<1e-6)fitView()}).observe(stageEl);
+})();
+function placeAnchor(p){const ph=curPhoto(),pl=ui.placing;if(!ph||!pl)return;const M=MODULES[pl.mod],st=modState(ph,pl.mod);st.a[M.anchors[pl.i].k]=p;pl.i++;
+  if(pl.i>=M.anchors.length){ui.placing=null;ui.tool='mover';simChanged();toast('Puntos marcados. Ajusta las medidas con los deslizadores.')}
+  renderPanel();drawAnchors();setCmp('after')}
+
+/* ---------- plan y propuesta ---------- */
+async function renderPlan(p){
+  await flushSim();const photos=await Store.photosOf(p.id);if(S.view!=='patient'||S.tab!=='plan'||S.pid!==p.id)return;
+  const inPlan=new Set((p.plan||[]).map(i=>i.procId)),sg=suggested(photos),sug=S.settings.catalog.filter(c=>sg.has(c.id)&&!inPlan.has(c.id));
+  const opts=AREAS.map(a=>{const it=S.settings.catalog.filter(c=>(c.area||'Otro')===a);return it.length?`<optgroup label="${a}">${it.map(c=>`<option value="${esc(c.id)}">${esc(c.name)}${a==='No quirúrgico'?'':' · '+esc(hrs(c.minH,c.maxH))}</option>`).join('')}</optgroup>`:''}).join('');
+  $('#tab').innerHTML=`<div style="display:flex;flex-direction:column;gap:14px">
+  ${sug.length?`<div class="note"><b>Simulados en las fotos y aún fuera del plan:</b><div class="row" style="margin-top:8px">${sug.map(c=>`<button class="btn sm" data-act="addProc" data-id="${esc(c.id)}" type="button">+ ${esc(c.name)}</button>`).join('')}</div></div>`:''}
+  <div class="card" style="display:flex;flex-direction:column;gap:12px">
+   <div class="row spread"><h2>Procedimientos considerados</h2><div class="row"><select class="in" id="procSel" style="width:auto" aria-label="Procedimiento del catálogo">${opts}</select><button class="btn primary" data-act="addProcSel" type="button">Agregar</button></div></div>
+   <div class="scroll-x"><table class="tbl"><thead><tr><th>Concepto</th><th>Horas mín.</th><th>Horas máx.</th><th>Valor (${esc(S.settings.currency)})</th><th>Nota para la paciente</th><th></th></tr></thead>
+   <tbody id="planRows">${(p.plan||[]).map(planRow).join('')||`<tr><td colspan="6" class="muted">Agrega procedimientos del catálogo o un concepto libre.</td></tr>`}</tbody></table></div>
+   <div class="row"><button class="btn sm" data-act="addExtra" type="button">+ Concepto adicional (anestesia, clínica, prendas…)</button></div></div>
+  <div class="totals" id="totals"></div>
+  <div class="card" style="display:flex;flex-direction:column;gap:12px"><div class="grid2">
+   <div class="field"><label for="f_date">Fecha estimada del procedimiento</label><input class="in" type="date" id="f_date" data-p="date" value="${esc(p.date)}"></div>
+   <div class="field"><label for="f_disc">Descuento (%)</label><input class="in" type="number" min="0" max="100" step="1" id="f_disc" data-p="discount" data-num="1" value="${esc(p.discount||0)}"></div>
+   <div class="field"><label for="f_status2">Estado</label><select class="in" id="f_status2" data-p="status">${STATES.map(s=>`<option ${s===p.status?'selected':''}>${s}</option>`).join('')}</select></div></div>
+   <div class="field"><label for="f_pnotes">Observaciones de la propuesta</label><textarea class="in" id="f_pnotes" data-p="planNotes">${esc(p.planNotes)}</textarea></div>
+   <div class="row"><button class="btn primary" data-act="pdf" type="button">Exportar propuesta en PDF</button><button class="btn" data-act="xls" type="button">Exportar plan a Excel</button><span class="small muted">${photos.filter(x=>x.after&&x.inPdf!==false).length} simulación(es) con antes y después se incluirán en el PDF.</span></div></div></div>`;
+  renderTotals(p)}
+function suggested(photos){const ids=new Set();for(const ph of photos){const v=(m,k)=>modPlaced(ph,m)?(ph.mods[m].s[k]||0):0,act=m=>modActive(ph,m);
+  const R={rino:act('rinoFrontal')||act('rinoPerfil'),blefaro:v('parpados','sup')>0||v('parpados','inf')>0,cejas:v('parpados','ceja')>0||v('parpados','cola')>0,toxina:v('parpados','frente')>0||v('parpados','entrecejo')>0||v('parpados','patas')>0,
+   lifting:v('lifting','mejilla')>0||v('lifting','mand')>0,cuello:v('lifting','cuello')>0||v('perfilFacial','cervical')>0,haSurcos:v('lifting','surco')>0||v('lifting','mario')>0,oto:act('otoplastia'),
+   mamoA:v('mamas','vol')>0,mamoR:v('mamas','vol')<0,pexia:v('mamas','elev')>0,abdomino:v('contorno','inferior')>0||v('perfil','colgajo')>0,
+   lipo:v('contorno','cintura')<0||v('contorno','cadera')<0||v('contorno','flanco')<0||v('perfil','abd')<0,gluteos:v('gluteos','vol')>0||v('gluteos','lateral')>0||v('perfil','glu')>0,
+   braquio:act('brazoI')||act('brazoD'),muslos:act('muslos'),mento:v('facial','menton')!==0||v('perfilFacial','proy')!==0,bichec:v('facial','mejilla')<0,haPomulos:v('facial','pomulo')>0,
+   haLabios:v('labios','sup')>0||v('labios','inf')>0,lipLift:v('labios','lift')>0,papada:v('perfilFacial','papada')>0};
+  for(const k in R)if(R[k])ids.add(k)}return ids}
+function planRow(it){const tm=it.extra?'<td></td><td></td>':it.ns?'<td colspan="2" class="muted small" style="vertical-align:middle">En consultorio</td>':`<td><input class="in n num ${it.ref?'ref':''}" type="number" min="0" step="0.5" data-f="minH" value="${esc(it.minH)}" aria-label="Horas mínimas"></td><td><input class="in n num ${it.ref?'ref':''}" type="number" min="0" step="0.5" data-f="maxH" value="${esc(it.maxH)}" aria-label="Horas máximas"></td>`;
+ return`<tr data-u="${it.uid}"><td style="min-width:190px"><input class="in" data-f="name" value="${esc(it.name)}" aria-label="Concepto"></td>
+ ${tm}
+ <td><input class="in p num" type="number" min="0" step="50000" data-f="price" value="${esc(it.price||'')}" placeholder="0" aria-label="Valor"></td><td style="min-width:170px"><input class="in" data-f="note" value="${esc(it.note)}" aria-label="Nota"></td>
+ <td><button class="btn sm ghost danger" data-act="delItem" data-u="${it.uid}" type="button" aria-label="Quitar ${esc(it.name)}">Quitar</button></td></tr>`}
+function renderTotals(p){const t=planTotals(p),el=$('#totals');if(!el)return;
+  el.innerHTML=`<div class="card"><span class="lbl">Procedimientos</span><b class="num">${t.n}</b></div><div class="card"><span class="lbl">Tiempo quirúrgico estimado</span><b class="num">${t.nq?esc(hrs(t.lo,t.hi)):'—'}</b>${t.ref?'<span class="small" style="color:var(--warn)">Incluye tiempos de referencia por confirmar</span>':''}</div><div class="card"><span class="lbl">Subtotal</span><b class="num">${esc(money(t.sub))}</b>${t.disc?`<span class="small muted">Descuento ${esc(money(t.disc))}</span>`:''}</div><div class="card hl"><span class="lbl">Total estimado</span><b class="num">${esc(money(t.total))}</b></div>`}
+function addProc(id){const p=patient(),c=S.settings.catalog.find(x=>x.id===id);if(!p||!c)return;p.plan=p.plan||[];p.plan.push({uid:uid(),procId:c.id,name:c.name,minH:c.minH,maxH:c.maxH,price:c.price||0,note:'',...(c.area==='No quirúrgico'?{ns:true}:{}),...(c.ref?{ref:true}:{})});savePatient(p);renderPlan(p)}
+
+/* ---------- ajustes ---------- */
+function renderSettings(){const s=S.settings;
+  app.innerHTML=`<h1>Ajustes</h1>
+  <div class="card" style="display:flex;flex-direction:column;gap:12px"><h2>Identidad en la herramienta y en los documentos</h2><div class="grid2">
+   ${[['tool','Nombre de la herramienta'],['doctor','Profesional'],['clinic','Clínica'],['city','Ciudad'],['contact','Contacto para la propuesta'],['currency','Moneda (código ISO)']].map(([k,l])=>`<div class="field"><label for="st_${k}">${l}</label><input class="in" id="st_${k}" data-st="${k}" value="${esc(s[k])}"></div>`).join('')}
+   <div class="field"><label for="st_validity">Vigencia de la propuesta (días)</label><input class="in" type="number" min="1" id="st_validity" data-st="validity" data-num="1" value="${esc(s.validity)}"></div></div>
+   <div class="field"><label for="st_legal">Texto aclaratorio del PDF</label><textarea class="in" id="st_legal" data-st="legal">${esc(s.legal)}</textarea></div></div>
+  <div class="card" style="display:flex;flex-direction:column;gap:12px"><div class="row spread"><h2>Catálogo de procedimientos</h2><button class="btn sm primary" data-act="catAdd" type="button">Agregar procedimiento</button></div>
+   <div class="small muted">Los tiempos y valores son los que se proponen al agregar cada procedimiento a un plan. En cada paciente se pueden ajustar. Los tiempos se suman: lifting de 4 h con blefaroplastia de 1 a 2 h da 5 a 6 h. Los tiempos resaltados son valores de referencia que la doctora debe confirmar; al editarlos dejan de resaltarse.</div>
+   <div class="scroll-x"><table class="tbl"><thead><tr><th>Procedimiento</th><th>Área</th><th>Horas mín.</th><th>Horas máx.</th><th>Valor base (${esc(s.currency)})</th><th></th></tr></thead><tbody>
+   ${s.catalog.slice().sort((a,b)=>AREAS.indexOf(a.area||'Otro')-AREAS.indexOf(b.area||'Otro')).map(c=>`<tr data-c="${esc(c.id)}"><td style="min-width:200px"><input class="in" data-cf="name" value="${esc(c.name)}" aria-label="Nombre"></td><td><select class="in" data-cf="area" aria-label="Área" style="min-width:130px">${AREAS.map(a=>`<option ${a===(c.area||'Otro')?'selected':''}>${a}</option>`).join('')}</select></td>
+    ${c.area==='No quirúrgico'?'<td colspan="2" class="muted small" style="vertical-align:middle">En consultorio</td>':`<td><input class="in n num ${c.ref?'ref':''}" type="number" min="0" step="0.5" data-cf="minH" value="${esc(c.minH)}" aria-label="Horas mínimas"></td><td><input class="in n num ${c.ref?'ref':''}" type="number" min="0" step="0.5" data-cf="maxH" value="${esc(c.maxH)}" aria-label="Horas máximas"></td>`}
+    <td><input class="in p num" type="number" min="0" step="50000" data-cf="price" value="${esc(c.price||'')}" placeholder="0" aria-label="Valor base"></td><td><button class="btn sm ghost danger" data-act="catDel" data-id="${esc(c.id)}" type="button">Quitar</button></td></tr>`).join('')}</tbody></table></div></div>
+  <div class="card" style="display:flex;flex-direction:column;gap:12px"><h2>Respaldo de la base de pacientes</h2>
+   <div class="note">Las fichas y las fotos se guardan solo en este dispositivo y en este navegador. No se envían a ningún servidor ni se sincronizan entre el computador y el iPhone. Exporta un respaldo con frecuencia y úsalo para pasar la base a otro equipo.</div>
+   <div class="row"><button class="btn primary" data-act="backup" type="button">Exportar respaldo</button><button class="btn" data-act="restore" type="button">Importar respaldo</button></div></div>`}
+
+/* ============ exportaciones ============ */
+async function getDL(){if(DL)return DL;try{if(window.claude&&window.claude.use)DL=await window.claude.use('downloads')}catch(e){}return DL}
+async function saveFile(name,blob){
+  if(!DL&&window.claude&&window.claude.use){toast('Preparando el archivo…',9000);await getDL()}
+  if(DL){try{await DL.save({filename:name,data:blob});toast('Archivo listo: '+name)}catch(e){toast(e&&e.code==='declined'?'Descarga cancelada.':'No se pudo guardar el archivo'+(e&&e.code?' ('+e.code+')':'')+'.')}return}
+  let top=false;try{top=window.top===window.self}catch(e){}
+  if(!top){toast('La descarga no está disponible en esta vista. Abre la herramienta desde su página en Claude e inténtalo de nuevo.',5000);return}
+  const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=name;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(a.href),4000)}
+const slug=s=>(s||'paciente').normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/[^a-zA-Z0-9]+/g,'-').replace(/^-|-$/g,'').toLowerCase()||'paciente';
+async function exportPDF(){
+  const p=patient();if(!p)return;await flushSim();const J=window.jspdf&&window.jspdf.jsPDF;if(!J){toast('El generador de PDF no cargó. Revisa la conexión y recarga.');return}
+  const photos=(await Store.photosOf(p.id)).filter(x=>x.after&&x.inPdf!==false).sort((a,b)=>(a.createdAt||0)-(b.createdAt||0));
+  const st=S.settings,t=planTotals(p),doc=new J({unit:'mm',format:'a4'}),PW=210,PH=297,M=16,CW=PW-2*M;let y=M;
+  const T=s=>String(s??'').replace(/[  ]/g,' ').replace(/[–—]/g,'-');
+  const AC=[90,53,176],INK=[34,28,46],MU=[107,99,122];
+  const need=h=>{if(y+h>PH-22){doc.addPage();y=M}};
+  const txt=(s,x,yy,o={})=>{doc.setFont('helvetica',o.b?'bold':'normal');doc.setFontSize(o.sz||10);doc.setTextColor(...(o.c||INK));doc.text(T(s),x,yy,{align:o.al||'left'})};
+  txt(st.tool,M,y+5,{sz:18,c:AC});txt([st.doctor,st.clinic].filter(Boolean).join('  ·  '),M,y+11,{sz:10,c:MU});
+  txt('Propuesta de procedimientos',PW-M,y+5,{sz:11,b:1,al:'right'});txt('Fecha: '+fmtDate(today()),PW-M,y+11,{sz:9,c:MU,al:'right'});
+  y+=16;doc.setDrawColor(...AC);doc.setLineWidth(.6);doc.setLineDashPattern([1.5,1.2],0);doc.line(M,y,PW-M,y);doc.setLineDashPattern([],0);y+=8;
+  txt('PACIENTE',M,y,{sz:8,c:MU,b:1});y+=5;txt(p.name||'Sin nombre',M,y+1,{sz:14});y+=7;
+  const info=[p.doc&&'Documento: '+p.doc,age(p.birth)!==''&&'Edad: '+age(p.birth)+' años',p.phone&&'Tel.: '+p.phone,p.email].filter(Boolean).join('   ·   ');if(info){txt(info,M,y,{sz:9,c:MU});y+=5}
+  txt('Fecha estimada del procedimiento: '+(p.date?fmtDate(p.date):'por definir'),M,y,{sz:10});y+=9;
+  if(photos.length){txt('SIMULACIÓN DE RESULTADOS',M,y,{sz:8,c:MU,b:1});y+=4;
+    for(const ph of photos){let w=(CW-6)/2,h=w*ph.h/ph.w;if(h>100){h=100;w=h*ph.w/ph.h}need(h+14);const x1=M+((CW-6)/2-w)/2,x2=M+(CW-6)/2+6+((CW-6)/2-w)/2;
+      txt(ph.label,M,y+4,{sz:10,b:1});y+=7;doc.addImage(ph.orig,'JPEG',x1,y,w,h,undefined,'FAST');doc.addImage(ph.after,'JPEG',x2,y,w,h,undefined,'FAST');y+=h+4;
+      txt('Antes',x1+w/2,y,{sz:9,c:MU,al:'center'});txt('Simulación',x2+w/2,y,{sz:9,c:AC,b:1,al:'center'});y+=8}}
+  need(30);txt('PROCEDIMIENTOS CONSIDERADOS',M,y,{sz:8,c:MU,b:1});y+=5;
+  doc.setFillColor(236,230,248);doc.rect(M,y-4,CW,7,'F');txt('Concepto',M+2,y+.8,{sz:9,b:1});txt('Tiempo quirúrgico',128,y+.8,{sz:9,b:1,al:'center'});txt('Valor',PW-M-2,y+.8,{sz:9,b:1,al:'right'});y+=8;
+  for(const it of p.plan||[]){const noteL=it.note?doc.splitTextToSize(T(it.note),CW-70):[];need(8+noteL.length*4);txt(it.name,M+2,y,{sz:10});txt(it.extra?'':it.ns?'En consultorio':hrs(+it.minH||0,+it.maxH||0),128,y,{sz:10,al:'center'});txt(+it.price?money(+it.price):'Por definir',PW-M-2,y,{sz:10,al:'right'});y+=4.5;
+    if(noteL.length){doc.setFont('helvetica','normal');doc.setFontSize(8.5);doc.setTextColor(...MU);doc.text(noteL,M+2,y);y+=noteL.length*4}doc.setDrawColor(221,216,230);doc.setLineWidth(.2);doc.line(M,y,PW-M,y);y+=5.5}
+  if(!(p.plan||[]).length){txt('Sin procedimientos registrados.',M+2,y,{sz:10,c:MU});y+=7}
+  need(30);txt('Tiempo quirúrgico total estimado',M+2,y,{sz:10});txt(t.nq?hrs(t.lo,t.hi):'-',PW-M-2,y,{sz:10,b:1,al:'right'});y+=6;
+  if(t.disc){txt('Subtotal',M+2,y,{sz:10});txt(money(t.sub),PW-M-2,y,{sz:10,al:'right'});y+=6;txt(`Descuento (${+p.discount}%)`,M+2,y,{sz:10});txt('- '+money(t.disc),PW-M-2,y,{sz:10,al:'right'});y+=6}
+  doc.setFillColor(...AC);doc.rect(M,y-4.5,CW,9,'F');txt('Total estimado',M+2,y+1.2,{sz:11,b:1,c:[255,255,255]});txt(t.sub?money(t.total):'Por definir',PW-M-2,y+1.2,{sz:11,b:1,c:[255,255,255],al:'right'});y+=12;
+  txt(`Propuesta válida por ${+st.validity||30} días a partir de la fecha de emisión.`,M,y,{sz:9,c:MU});y+=7;
+  if(p.planNotes){const L=doc.splitTextToSize(T(p.planNotes),CW);need(8+L.length*4.5);txt('OBSERVACIONES',M,y,{sz:8,c:MU,b:1});y+=5;doc.setFont('helvetica','normal');doc.setFontSize(10);doc.setTextColor(...INK);doc.text(L,M,y);y+=L.length*4.5+4}
+  const LG=doc.splitTextToSize(T(st.legal||''),CW);need(LG.length*3.8+30);doc.setFont('helvetica','normal');doc.setFontSize(8);doc.setTextColor(...MU);doc.text(LG,M,y);y+=LG.length*3.8+16;
+  doc.setDrawColor(...INK);doc.setLineWidth(.2);doc.line(M,y,M+70,y);doc.line(PW-M-70,y,PW-M,y);txt(st.doctor||'Profesional',M,y+4.5,{sz:9});txt('Paciente',PW-M-70,y+4.5,{sz:9});
+  const n=doc.getNumberOfPages();for(let i=1;i<=n;i++){doc.setPage(i);txt([st.clinic,st.city,st.contact].filter(Boolean).join('  ·  '),M,PH-9,{sz:8,c:MU});txt(`Página ${i} de ${n}`,PW-M,PH-9,{sz:8,c:MU,al:'right'})}
+  await saveFile(`propuesta-${slug(p.name)}-${today()}.pdf`,doc.output('blob'))}
+function xlsReady(){if(!window.XLSX){toast('El generador de Excel no cargó. Revisa la conexión y recarga.');return false}return true}
+async function exportXLS(){
+  const p=patient();if(!p||!xlsReady())return;const st=S.settings,X=window.XLSX,t=planTotals(p),plan=p.plan||[];
+  const rows=[[st.tool],[[st.doctor,st.clinic].filter(Boolean).join(' · ')],[],['Paciente',p.name],['Documento',p.doc||''],['Teléfono',p.phone||''],['Correo',p.email||''],['Estado',p.status],['Fecha estimada',p.date?fmtDate(p.date):'Por definir'],['Emitida',fmtDate(today())],[],
+    ['Concepto','Tipo','Horas mín.','Horas máx.','Valor ('+st.currency+')','Nota']];
+  const r0=rows.length+1;for(const it of plan)rows.push([it.name,it.extra?'Adicional':it.ns?'No quirúrgico':'Procedimiento',it.extra||it.ns?'':+it.minH||0,it.extra||it.ns?'':+it.maxH||0,+it.price||0,it.note||'']);
+  const r1=rows.length,has=plan.length>0;rows.push([]);
+  rows.push(['Tiempo quirúrgico total (h)','',has?{t:'n',v:t.lo,f:`SUM(C${r0}:C${r1})`}:0,has?{t:'n',v:t.hi,f:`SUM(D${r0}:D${r1})`}:0]);
+  const rs=rows.length+1;rows.push(['Subtotal','','','',has?{t:'n',v:t.sub,f:`SUM(E${r0}:E${r1})`}:0]);rows.push(['Descuento (%)','','','',+p.discount||0]);
+  rows.push(['Total estimado','','','',{t:'n',v:t.total,f:`E${rs}*(1-E${rs+1}/100)`}]);if(p.planNotes){rows.push([]);rows.push(['Observaciones',p.planNotes])}
+  const ws=X.utils.aoa_to_sheet(rows);ws['!cols']=[{wch:34},{wch:14},{wch:11},{wch:11},{wch:18},{wch:44}];const wb=X.utils.book_new();X.utils.book_append_sheet(wb,ws,'Propuesta');
+  await saveFile(`plan-${slug(p.name)}-${today()}.xlsx`,new Blob([X.write(wb,{type:'array',bookType:'xlsx'})]))}
+async function exportAllXLS(){if(!xlsReady())return;const X=window.XLSX;
+  const rows=[['Paciente','Documento','Teléfono','Correo','Estado','Fecha estimada','Procedimientos','Horas mín.','Horas máx.','Subtotal','Descuento (%)','Total','Próximo contacto','Pendiente','Última actualización']];
+  for(const p of S.patients){const t=planTotals(p);rows.push([p.name,p.doc||'',p.phone||'',p.email||'',p.status,p.date?fmtDate(p.date):'',(p.plan||[]).filter(i=>!i.extra).map(i=>i.name).join(', '),t.lo,t.hi,t.sub,+p.discount||0,t.total,p.nextDate?fmtDate(p.nextDate):'',p.nextNote||'',new Date(p.updatedAt||p.createdAt||Date.now()).toLocaleDateString('es-CO')])}
+  const det=[['Paciente','Concepto','Tipo','Horas mín.','Horas máx.','Valor','Nota']];for(const p of S.patients)for(const it of p.plan||[])det.push([p.name,it.name,it.extra?'Adicional':it.ns?'No quirúrgico':'Procedimiento',it.extra||it.ns?'':+it.minH||0,it.extra||it.ns?'':+it.maxH||0,+it.price||0,it.note||'']);
+  const seg=[['Paciente','Fecha','Tipo','Nota']];for(const p of S.patients)for(const j of p.journey||[])seg.push([p.name,fmtDate(j.date),j.type,j.note]);
+  const wb=X.utils.book_new(),a=X.utils.aoa_to_sheet(rows),b=X.utils.aoa_to_sheet(det);a['!cols']=[{wch:28},{wch:14},{wch:14},{wch:24},{wch:18},{wch:14},{wch:40},{wch:10},{wch:10},{wch:14},{wch:12},{wch:14},{wch:16}];b['!cols']=[{wch:28},{wch:32},{wch:14},{wch:10},{wch:10},{wch:14},{wch:40}];
+  X.utils.book_append_sheet(wb,a,'Pacientes');X.utils.book_append_sheet(wb,b,'Procedimientos');const c3=X.utils.aoa_to_sheet(seg);c3['!cols']=[{wch:28},{wch:12},{wch:22},{wch:60}];X.utils.book_append_sheet(wb,c3,'Seguimiento');await saveFile(`base-pacientes-${today()}.xlsx`,new Blob([X.write(wb,{type:'array',bookType:'xlsx'})]))}
+async function exportBackup(){await flushSim();const photos=(await Store.all('photos')).map(ph=>({...ph,brush:ph.brush?b64FromBuf(new Float32Array(ph.brush).buffer):null}));
+  await saveFile(`respaldo-simulador-${today()}.json`,new Blob([JSON.stringify({app:'yh-simulador',v:1,at:Date.now(),settings:S.settings,patients:S.patients,photos})]))}
+async function importBackup(file){try{const d=JSON.parse(await file.text());if(d.app!=='yh-simulador'||!Array.isArray(d.patients))throw new Error('formato');
+  if(!await confirmBox('Importar respaldo',`Se reemplazará la base actual por ${d.patients.length} paciente(s) del archivo.`,'Importar'))return;
+  await Store.clear('patients');await Store.clear('photos');for(const p of d.patients)await Store.put('patients',p);for(const ph of d.photos||[]){if(ph.brush)ph.brush=new Float32Array(bufFromB64(ph.brush));await Store.put('photos',ph)}
+  if(d.settings){S.settings={...structuredClone(DEFAULT_SETTINGS),...d.settings};await saveSettings()}S.patients=d.patients;S.view='list';ui.photoId=null;brand();render();toast('Respaldo importado.')}catch(e){console.error(e);toast('El archivo no es un respaldo válido de esta herramienta.')}}
+
+/* ============ eventos ============ */
+const acts={
+  nav:async e=>{await flushSim();S.view=e.dataset.v;render()},
+  newPatient:()=>{const p={id:uid(),name:'',doc:'',birth:'',phone:'',email:'',notes:'',status:'Valoración',date:'',discount:0,plan:[],createdAt:Date.now(),updatedAt:Date.now()};S.patients.push(p);Store.put('patients',p).catch(saveErr);S.pid=p.id;S.view='patient';S.tab='sim';ui.photoId=null;ui.mod='';render()},
+  openPatient:e=>{S.pid=e.dataset.id;S.view='patient';S.tab='sim';ui.photoId=null;ui.mod='';render()},
+  tab:async e=>{await flushSim();S.tab=e.dataset.t;renderPatient()},
+  delPatient:async()=>{const p=patient();if(!await confirmBox('Eliminar paciente',`Se eliminarán la ficha, las fotos y el plan de ${p.name||'este paciente'}. No se puede deshacer.`))return;clearTimeout(ui.pending);ui.pending=null;for(const ph of await Store.photosOf(p.id))await Store.del('photos',ph.id);await Store.del('patients',p.id);S.patients=S.patients.filter(x=>x.id!==p.id);S.view='list';render()},
+  takePhoto:()=>$('#fileCam').click(),pickPhoto:()=>$('#fileLib').click(),webcam:openWebcam,
+  selPhoto:async e=>{await flushSim();ui.photoId=e.dataset.id;ui.mod='';$$('.ph').forEach(b=>b.setAttribute('aria-pressed',b.dataset.id===ui.photoId));openPhoto()},
+  selMod:e=>{ui.mod=ui.mod===e.dataset.m?'':e.dataset.m;ui.placing=null;const ph=curPhoto();if(ui.mod&&!modPlaced(ph,ui.mod))ui.placing={mod:ui.mod,i:0};renderPanel();drawAnchors();setCmp('after')},
+  place:()=>{if(ui.placing)return;const ph=curPhoto();modState(ph,ui.mod).a={};ui.placing={mod:ui.mod,i:0};Engine.recompute();Engine.render();renderPanel();drawAnchors();setCmp('after')},
+  placeCancel:()=>{ui.placing=null;renderPanel();drawAnchors()},
+  modReset:()=>{const ph=curPhoto();modState(ph,ui.mod).s={};simChanged();renderPanel()},
+  tool:e=>{ui.tool=e.dataset.t;$$('.tool[data-t]').forEach(b=>b.setAttribute('aria-pressed',b.dataset.t===ui.tool));setCmp('after')},
+  undo:()=>{if(Engine.undo())scheduleSave();else toast('No hay trazos de pincel por deshacer.')},
+  brushReset:()=>{Engine.resetBrush();scheduleSave()},
+  cmp:e=>setCmp(e.dataset.c),
+  present:()=>{const on=!stageEl.classList.contains('present');stageEl.classList.toggle('present',on);document.body.style.overflow=on?'hidden':'';$('#btnPresent',stageEl).textContent=on?'Salir':'Presentar';if(on){ui.placing=null;ui.tool='mover';updateHint();$$('.tool[data-t]').forEach(b=>b.setAttribute('aria-pressed',b.dataset.t===ui.tool))}setCmp(on?'split':'after');requestAnimationFrame(fitView)},
+  filter:e=>{S.filter=e.dataset.s;renderList()},
+  setState:e=>{const p=patient();setStatus(p,e.dataset.s);renderPatient()},
+  addJ:()=>{const p=patient(),note=$('#jNote').value.trim();if(!note){toast('Escribe una nota para el registro.');return}p.journey=p.journey||[];p.journey.push({id:uid(),date:$('#jDate').value||today(),type:$('#jType').value,note});savePatient(p);renderSeg(p)},
+  delJ:e=>{const p=patient();p.journey=(p.journey||[]).filter(j=>j.id!==e.dataset.id);savePatient(p);renderSeg(p)},
+  zoom:e=>{const d=+e.dataset.d;if(!d)return fitView();const r=stageEl.getBoundingClientRect();zoomAt(d>0?1.35:1/1.35,r.left+r.width/2,r.top+r.height/2)},
+  saveImg:async()=>{const ph=curPhoto(),p=patient();const b=new Blob([bufFromB64(Engine.jpeg().split(',')[1])],{type:'image/jpeg'});await saveFile(`simulacion-${slug(p.name)}-${slug(ph.label)}.jpg`,b)},
+  delPhoto:async()=>{const ph=curPhoto();if(!await confirmBox('Eliminar foto','Se eliminarán la foto y su simulación.'))return;clearTimeout(ui.pending);ui.pending=null;await Store.del('photos',ph.id);const p=patient();if(ui.photos[0]&&ui.photos[0].id===ph.id){p.thumb=null;savePatient(p)}ui.photoId=null;renderPatient()},
+  addProc:e=>addProc(e.dataset.id),addProcSel:()=>addProc($('#procSel').value),
+  addExtra:()=>{const p=patient();p.plan=p.plan||[];p.plan.push({uid:uid(),extra:true,name:'Concepto adicional',minH:0,maxH:0,price:0,note:''});savePatient(p);renderPlan(p)},
+  delItem:e=>{const p=patient();p.plan=p.plan.filter(i=>i.uid!==e.dataset.u);savePatient(p);renderPlan(p)},
+  pdf:exportPDF,xls:exportXLS,xlsAll:exportAllXLS,backup:exportBackup,restore:()=>$('#fileBackup').click(),
+  catAdd:()=>{S.settings.catalog.push({id:uid(),name:'Nuevo procedimiento',area:'Otro',minH:1,maxH:2,price:0,mod:''});saveSettings();renderSettings()},
+  catDel:e=>{S.settings.catalog=S.settings.catalog.filter(c=>c.id!==e.dataset.id);saveSettings();renderSettings()}
+};
+document.addEventListener('click',e=>{const b=e.target.closest('[data-act]');if(!b||b.disabled)return;const f=acts[b.dataset.act];if(f)Promise.resolve(f(b)).catch(err=>{console.error(err);toast('Ocurrió un error. Inténtalo de nuevo.')})});
+document.addEventListener('input',e=>{const t=e.target;
+  if(t.id==='q'){S.q=t.value;$('#plist').innerHTML=listHTML();return}
+  if(t.dataset.p){const p=patient();if(!p)return;if(t.dataset.p==='status')setStatus(p,t.value);else p[t.dataset.p]=t.dataset.num?+t.value||0:t.value;savePatient(p);if(t.dataset.p==='name')$('#pName').textContent=p.name||'Paciente sin nombre';if(t.dataset.p==='status'){const s=$('#pState');s.textContent=p.status;s.className='pill '+(STATE_CLS[p.status]||'')}if(t.dataset.p==='discount')renderTotals(p);return}
+  if(t.dataset.f){const p=patient(),it=p.plan.find(i=>i.uid===t.closest('tr').dataset.u);if(!it)return;it[t.dataset.f]=['minH','maxH','price'].includes(t.dataset.f)?+t.value||0:t.value;if(['minH','maxH'].includes(t.dataset.f)&&it.ref){delete it.ref;$$('.ref',t.closest('tr')).forEach(x=>x.classList.remove('ref'))}savePatient(p);renderTotals(p);return}
+  if(t.dataset.s){const ph=curPhoto(),d=MODULES[ui.mod].sliders.find(x=>x.k===t.dataset.s),v=+t.value;modState(ph,ui.mod).s[d.k]=v;$('#o_'+d.k).textContent=(v>0&&d.min<0?'+':'')+v;stageEl.querySelector('#anchors').style.opacity=0;simChanged();return}
+  if(t.id==='bsize'){ui.size=+t.value;$('#o_bsize').textContent=ui.size;return}
+  if(t.id==='bpow'){ui.power=+t.value;$('#o_bpow').textContent=ui.power;return}
+  if(t.dataset.st){S.settings[t.dataset.st]=t.dataset.num?+t.value||0:t.value;saveSettings();brand();return}
+  if(t.dataset.cf){const c=S.settings.catalog.find(x=>x.id===t.closest('tr').dataset.c);if(!c)return;c[t.dataset.cf]=['minH','maxH','price'].includes(t.dataset.cf)?+t.value||0:t.value;if(['minH','maxH'].includes(t.dataset.cf)&&c.ref){delete c.ref;$$('.ref',t.closest('tr')).forEach(x=>x.classList.remove('ref'))}saveSettings();if(t.dataset.cf==='area')renderSettings();return}});
+document.addEventListener('change',e=>{const t=e.target;
+  if(t.id==='fileCam'||t.id==='fileLib'){const f=t.files[0];t.value='';if(f)addPhotoFromBlob(f);return}
+  if(t.id==='fileBackup'){const f=t.files[0];t.value='';if(f)importBackup(f);return}
+  if(t.id==='phLabel'){const ph=curPhoto();ph.label=t.value;scheduleSave();const s=$(`.ph[data-id="${ph.id}"] span`);if(s)s.textContent=ph.label;return}
+  if(t.id==='phPdf'){curPhoto().inPdf=t.checked;scheduleSave();return}
+  if(t.dataset.s){stageEl.querySelector('#anchors').style.opacity=1;renderPanelMods()}});
+function renderPanelMods(){const ph=curPhoto();if(!ph)return;$$('.modbtn').forEach(b=>b.classList.toggle('on',modActive(ph,b.dataset.m)))}
+window.addEventListener('pagehide',()=>{if(ui.pending){clearTimeout(ui.pending);ui.pending=null;savePhotoNow()}});
+document.addEventListener('visibilitychange',()=>{if(document.hidden&&ui.pending){clearTimeout(ui.pending);ui.pending=null;savePhotoNow()}});
+
+/* ============ arranque ============ */
+(async()=>{
+  await Store.open();
+  try{const s=await Store.get('kv','settings');if(s){S.settings={...structuredClone(DEFAULT_SETTINGS),...s};if((s.catalogV||1)<2){const have=new Set(S.settings.catalog.map(c=>c.id));for(const c of DEFAULT_CATALOG)if(!have.has(c.id))S.settings.catalog.push(structuredClone(c));S.settings.catalogV=2;await Store.put('kv',S.settings,'settings')}}S.patients=await Store.all('patients');
+    if(!s){await Store.put('kv',S.settings,'settings');if(!S.patients.length)await seedDemo()}}catch(e){console.error(e)}
+  brand();chipSaved();render();
+  getDL();
+})();
+</script>
+<script defer src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script defer src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+</body>
+</html>
